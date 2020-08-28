@@ -1,0 +1,90 @@
+#+TITLE: The effect of prism adaptation on verticality perception
+#+AUTHOR: RJL
+#+LANGUAGE:'en'
+
+* Introduction 
+1. Prism adaptation : visuo motor alteration that induces compensation
+   and adaptation
+2. effect of PA on spatial cognition, notably in usn,  on other modalities
+3. effect of PA on the personal space perception, such as haptic
+   exploration, or tactile perception, or arm sense position
+4. PA act on the inter-hemispheric competition, by inhibiting the
+   contralateral (to the optical shift) hemipshere. Explain the
+   recents models.
+5. PA can improve postural stability. No effect have been found on
+   gravity perception, but very few studies run until now.
+6. Yet, many studies found a systematic link between usn and
+   vertical misperception.
+7. In the horizontal dimension, usn can be linked with attentional and
+   representational disorder to the lack of (multi)sensory integration
+   (jacobs, 12). This lack of sensory integration could be also
+   explained the vertical bias.
+8. Indeed, there is two hypothsesis : either cortical otolithic
+   imbalance, or somatosensory imbalance. Txhese two solutions fits
+   well with the association between usn and lateropulsion for ex.
+9. Thus, there is maybe a causal link between space perception in the
+   horizontal and vertical perception.
+10. Because PA act on the horizontal perception on the patho and
+    healthy subject, PA could act on verticality perception in the
+    healthy subject.
+11. We can speculate that if inter-hemispheric competition act on both
+    the egocentric and gravity referentials, then PA might affect both referentials.
+
+* Methods
+
+- How many participants ?
+- Prism adaptation = which degree ? number of pointing, description of
+  the apparatus
+- The task =
+  - horiz tasks = SSA, OLP, LM. Note that we must use a passive
+    proprioceptive task, or a visual SA task. Badly, impossible to
+    touch the subject ... Thus maybe more simple to assess
+    after-effect with an egocentric task ? or maybe not because we are
+    not interested in this effect...The SSA will be sufficient.
+  - vert tasks = VV, LBA, SSA in the supine position ?
+  - Thus we can have a total of three tasks. The VV task and LBA are
+    not very long because there is only 10 trials. the LM task must be
+    stimulating, with a lot of pre-tests !! Maybe recolting data
+    online can be useful. We can modifiate the script of E. ... or run
+    the expe with a simple program like sesame in a first time...
+  - Quid of a psychometric version of the VV task ?? Hard to compute I
+    think, but in theory more reliable to detect very fine-grain
+    effects ... 
+- The procedure = First the participants will perform the LM and VV
+  task, randomly. Then, they will execute 250 pointing, with an
+  optical shift of 15°. the after-effects will be evaluated
+  immediately after the prism removal with OLP and the SSA task. Then
+  the participant will perform the VV task, and then the LM task. The
+  VV will be performed always before the LM task, to avoid a
+  re-adaptation effect during the LM task. If the LBA is performed, it
+  will be performed either before or after the VV task. Or maybe
+  always after, because the supine position can decrease arousal.
+- The variables will be = group (d, g, c) * session (pre, post)
+- The statistical design is a mixed anova. There is multiple
+  possibilities :
+  - 1) perform a mixed model analysis with the following design = VD ~
+    session*group + (1+session|S) + (1 | items). items can be useful
+    to control the variance due to the initial offset orientation.
+  - 2) perform a simple mixed anova. the interaction must be
+    decomposed with post-hoc comparisons. Nevertheless it is not
+    necessary the case if we planned linear and quadratic
+    contrasts. (polynomial analysis)
+  - 3) if we have a full within-subject design, we ll have more power
+    ! We ll get this design = VD ~ 1 + group*session + (1 +
+    group:session | S).
+    
+- What if the anova conditions are not respected because of outliers
+  or normality ? It will be possible to perform no parametric tests on
+ delta score...with contrast ...
+- Outliers must be detect in pre-test ? we can exclude subject with a
+  mean verticality outside 3° to be not too much conservative.
+- If we opt for a within design, maybe pre test is useless ? right if
+  we have a sham prism condition. But is may be too heavy.
+- The data will be collected by computer and entered in R. 
+
+#+begin_src R :results output :session *R* :exports both
+library(lattice)
+print(xyplot(1:10 ~ 1:10))
+#+end_src
+
+
