@@ -1,0 +1,105 @@
+---
+title: Choix de la tâche spatiale mesurant l'effet post-test de l'adaptation prismatique
+  sur la perception latéralisée de l'espace
+output:
+  word_document: default
+  html_document: default
+---
+AP = adaptation prismatique
+VV = verticale visuelle
+2AFC = Two alternative forced-choice (réponse binaire)
+
+Quelle tâche utiliser pour évaluer effet post-test AP sur la perception spatiale égocentrée (ou égocentrée + allocentrée ?)
+
+### 1) Bissection de ligne perceptive  
+
+avantage = 
+
+  - tâche très utilisée dans la littérature
+  - modalité visuelle, comme pour VV
+  - peut être flashée pour contrôler exploration saccadique. Neutralise effet oculo-moteur de "bas niveau".
+  - réponse verbale ou manuelle par 2AFC (psychophysique) ou par ajustement 
+  
+défaut = 
+
+  - le flash rajoute de la difficulté, donc il faut faire des pré-tests pour que tâche soit facile dans les conditions "faciles". 
+  - pas d'antécédant à ma connaissance de bissection flashée après AP.
+  - tâche pas purement égocentrée    
+
+### 2) Droit-devant visuel  
+
+avantage =   
+
+  - purement égocentré
+  - modalité visuelle, comme pour VV
+  - tâche utilisée par le passé (mais vieux articles...) dans la littérature sur AP
+  
+défaut =  
+
+  - pourrait refléter un processus sensorimoteur de bas niveau, ie, sensation subjective que regard dirigé vers le droit-devant alors que les yeux sont en fait orientés vers la gauche après AP. ("eye muscle potentiation"). Par ex, fixer cible à +30 ° pendant quelques minutes déplace le droit-devant oculo-centré dans la même direction.
+  - --> A noter que malgré cet effet, l'AP induit quand même des effets post-tests sur la bissection de ligne perceptive...
+  
+### 3) Droit-devant visuel psychométrique
+
+Principe = flasher un point lumineux à G ou à D du droit-devant soi. Réponse 2AFC via deux clefs de réponse sur un boitier.  
+
+avantage = 
+
+  - purement égocentré
+  - flash (200ms ?) contrôle effet oculo-moteur
+  - mesure fine via mesure psychophysique (réponse 2AFC)
+  - tâche innovante dans contexte AP
+  
+défaut =   
+
+  - tâche aussi inhabituelle pour contexte AP
+  - nécessite pré-test +++
+  - problème de la durée du flash ?
+  
+### 4) Droit-devant proprioceptif
+
+Avantage =
+
+  - mesure classique, fiable, égocentrée
+  - a mesurer quoi qu'il arrive
+  
+Défaut =
+
+  - modalité proprioceptive. 
+  - --> Pourrait-être intéressant d'associer cette tâche à la verticale haptique ?
+  
+### 5) Bissection numérique
+
+En principe, reflète organisation spatiale des nombres de G à D sur le plan mental. On retrouve biais de négligence numérique après AVC droit, et AP induit pseudo-NSU droite dans cette tâche.
+
+Avantage = 
+
+  - Pas de biais sensori-moteur
+  - tâche "cognitive"
+  - tâche éprouvée dans la littérature sur AP (Loftus)
+  
+Défaut =
+
+  - n'est pas une tâche "miroir" de la VV dans la dimension horizontale (pas de modalité)
+  - chiffres présentés visuellement cependant
+  - on s'éloigne des mesures consensuelles sur AP (bissection de ligne perceptive)
+  
+### 6) Grey Scale
+
+Principe = présenter une en haut et une en bas deux barres de contraste noir/gris qui ont +/- la meme luminance et demander aux sujets de dire à voix haute quelle barre est la plus sombre. on retrouve un biais dans cette tache : les barres avec le côté gauche sombre sont plus souvent considérées plus sombres. Cela serait associée à la pseudo NSU, ie, une plus grande saillance de l'hémi-espace gauche car dominance de l'hémisphère droit pour distribution de l'attention spatiale.
+
+Avantage =
+
+  - les barres peuvent être flashées. Loftus et al (2009) flashaient la ligne pendant 200/250 ms.
+  - serait liée à la saillance perceptive de l'espace. AP vers la gauche diminuerait ainsi la saillance perceptive de l'espace gauche en post test comparé au pré-test
+  - pas de réponse sensori-motrice.
+  - modalité visuelle
+  
+Défaut = 
+  
+  - tache peu courante
+  - cette tache mesure la saillance perceptive de l'espace gauche et droit, mais dans quelles coordonnées ? allocentrée ou égocentrée ? contrairement à la tache de droit-devant, on ne sait pas si les performances obtenues dans cette tâche reflète un effet de l'AP sur la construction du référentiel égocentré ou bien un simple effet attentionnel. Néanmoins on peut rétorquer que c'est aussi le cas pour la tache du droit-devant ! Si l'espace visuel droit (rétino-centré ?) est plus saillant après AP gauche, alors la perception du droit-devant sera orientée vers la droite. Je crois qu'on ne peut pas démêler les influences parallèles des signaux sensoriels (bottom-up) et attentionnels (top-down) sur l'orientation du droit-devant égocentré ! 
+
+  
+
+
