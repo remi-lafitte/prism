@@ -1,0 +1,13 @@
+---
+title: Choix de la tâche spatiale mesurant l'effet post-test de l'adaptation prismatique
+  sur la perception latéralisée de l'espace
+output:
+  word_document: default
+  html_document: default
+---
+
+Prisme de 10 ou 15 degrés ? quel effet ?
+Michel & Cruz (2015)
+Colent (2000)
+Michel (2003)
+

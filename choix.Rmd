@@ -9,6 +9,15 @@ AP = adaptation prismatique
 VV = verticale visuelle
 2AFC = Two alternative forced-choice (réponse binaire)
 
+Précaution à prendre pour PA : 
+- essayer de varier les consignes et les cibles entre tache SM et tache "cognitive". eg, apparatus pour PS ne devrait pas etre identique qu'a tache LM. à noter que mesure VSA pas claire dans litté, mesure "eye muscle potentiation", et donc un effet purement SM, pas très intéressant. Etude de Rode 2015 suggère que PS reflète shift ref égoc. Je pense qu'il faut compléter cette tache avec une tache assez classique égoc psychophysique. En effet, si déviation spontanée regard vers la gauche après LPA, ça biaise tache latéralisée. Avec croix de fixation + flash, on a au contraire un meilleur contrôle de cet effet SM. Ca respecte aussi méthodo de LOftus 2009, qui ont flashé des greyscales.
+
+Controle de la position du sujet = quid systeme vicon ? controle de la body midline
+
+Attt à interdire croiser jambe + pieds
+
+Si tache avec scanning, attt au contrebalanceent
+
 Quelle tâche utiliser pour évaluer effet post-test AP sur la perception spatiale égocentrée (ou égocentrée + allocentrée ?)
 
 ### 1) Bissection de ligne perceptive  
