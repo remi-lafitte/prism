@@ -9,7 +9,8 @@ library(ggpmisc)
 
 #MANUALLY SET WORKING DIRECTORY TO DIRECTORY CONTAINING DATAFILE PA_META.csv
 #load the data
-meta <- read.csv("PA_META.csv")
+meta <- read.csv(here::here("McINTOSH_19_PA_META",
+  "PA_META.csv"))
 #restrict to leftward prisms
 meta <- meta[meta$direction == "L", ]
 
@@ -25,7 +26,7 @@ meta$dva_LB <- atan(meta$length_LB/meta$distance)*(180/pi)
 
 #calculate standard error per study
 meta$SE <- 1/sqrt(meta$n)
-
+# View(meta)
 #CORRELATIONS to check possible predictors
 cor(meta[c(5,6,16,17,11)], method="p", use="complete.obs")
 cor(meta[c(5,6,16,18,14)], method="p", use="complete.obs")
