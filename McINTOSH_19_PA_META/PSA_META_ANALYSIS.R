@@ -16,7 +16,7 @@ meta <- read.csv(here::here("McINTOSH_19_PA_META","PSA_META.csv"), sep = ";", de
 str(meta)
 
 #calculate standard error per study
-meta$SE <- 1/sqrt(meta$n)
+# meta$SE <- 1/sqrt(meta$n)
 
 #CORRELATIONS to check possible predictors--------
 cor(meta[c("duration_c","prism", "number","deg", "d")], method="p", use="complete.obs")
