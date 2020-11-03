@@ -47,13 +47,12 @@ ggplot(meta, aes(x=deg, y=d)) +
         legend.key.size =  unit(0.1, "in"), legend.background = element_blank()) 
 
 prior <- c(
-  prior(normal(0, 1.5), coef = intercept),
-  # conservative prior
+  prior(normal(0, 2), coef = intercept),
   prior(cauchy(0, 1), class = sd)
 )
 # meta$STUDY
 m1 <- brm(data = meta, family = gaussian,
-            d | se(SD) ~ 1 + (1 | ID) + (1 | STUDY),
+            d | se(SD) ~ 1 + (1 | ID),
             prior = c(prior(normal(0, 1.5), class = Intercept),
                       prior(cauchy(0, 1), class = sd)),
   save_all_pars = TRUE,
@@ -61,6 +60,8 @@ m1 <- brm(data = meta, family = gaussian,
   cores = parallel::detectCores(),
   control = list(adapt_delta = .99)
 )
+# simple model, without moderators, such as prism strenght, or duration.
+# it will be the next step...
 print(m1)
 # good fit
 m1 %>%
@@ -69,13 +70,69 @@ m1 %>%
     combo = c("dens_overlay", "trace"),
     theme = theme_bw(base_size = 16)
   )
-
+print(m1)
 # forest plot------------------
 # load tidybayes
 library(tidybayes)
 get_variables(m1)
 
 m1 %>%
-  spread_draws(m1, b_Intercept[Intercept]) %>%
-  head(10)
+  spread_draws(b_Intercept,r_ID[ID,]) %>%
+  # add the grand mean to the group-specific deviations
+  mutate(mu = b_Intercept + r_ID) %>%
+  ungroup() %>%
+  mutate(outcome = str_replace_all(ID, "[.]", " ")) %>% 
+  # plot
+  ggplot(aes(x = mu, y = reorder(outcome))) +
+  geom_vline(xintercept = fixef(m1)[1, 1], color = "white", size = 1) +
+  geom_vline(xintercept = fixef(m1)[1, 3:4], color = "white", linetype = 2) +
+  geom_halfeyeh(.width = .95, size = 2/3) +
+  labs(x = expression(italic("Cohen's d")),
+       y = NULL) +
+  theme(panel.grid   = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y  = element_text(hjust = 0))+
+  theme_bw(base_size=20)
 
+
+
+
+
+# Study-specific effects are deviations + average
+out_r <- m1 %>%
+  spread_draws(b_Intercept,r_ID[ID,]) %>%
+  # add the grand mean to the group-specific deviations
+  mutate(mu = b_Intercept + r_ID)
+
+
+# Average effect
+out_f <- spread_draws(fit_rem, b_Intercept) %>% 
+  mutate(study = "Average")
+# Combine average and study-specific effects' data frames
+out_all <- bind_rows(out_r, out_f) %>% 
+  ungroup() %>%
+  # Ensure that Average effect is on the bottom of the forest plot
+  mutate(study = fct_relevel(study, "Average"))
+# Data frame of summary numbers
+out_all_sum <- group_by(out_all, study) %>% 
+  mean_qi(b_Intercept)
+#> Warning: unnest() has a new interface. See ?unnest for details.
+#> Try `cols = c(.lower, .upper)`, with `mutate()` needed
+# Draw plot
+out_all %>%   
+  ggplot(aes(b_Intercept, study)) +
+  geom_density_ridges(
+    rel_min_height = 0.01, 
+    col = NA,
+    scale = 1
+  ) +
+  geom_pointintervalh(
+    data = out_all_sum, size = 1
+  ) +
+  geom_text(
+    data = mutate_if(out_all_sum, is.numeric, round, 2),
+    # Use glue package to combine strings
+    aes(label = glue::glue("{b_Intercept} [{.lower}, {.upper}]"), x = Inf),
+    hjust = "inward"
+  )
+#> Picking joint bandwidth of 0.0226
