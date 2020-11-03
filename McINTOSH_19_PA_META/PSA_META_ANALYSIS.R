@@ -1,13 +1,14 @@
-#McIntosh, Brown & Young (2018)
+#McIntosh, Brown & Young (2018)--------------
 #"Meta-analysis of the visuospatial aftereffects of prism adaptation, with two novel experiments"
 #ANALYSIS CODE, META_ANALYSIS
-#LOAD REQUIRED LIBRARIES
+#LOAD REQUIRED LIBRARIES--------------
 library(ggplot2)
 library(gridExtra)
 library(metafor)
 library(ggpmisc)
-
-#MANUALLY SET WORKING DIRECTORY TO DIRECTORY CONTAINING DATAFILE PA_META.csv
+library(tidyverse)
+library(magrittr)
+#MANUALLY SET WORKING DIRECTORY TO DIRECTORY CONTAINING DATAFILE PA_META.csv---------
 #load the data
 meta <- read.csv(here::here("McINTOSH_19_PA_META","PSA_META.csv"), sep = ";", dec = ",")
 
@@ -17,15 +18,14 @@ str(meta)
 #calculate standard error per study
 meta$SE <- 1/sqrt(meta$n)
 
-#CORRELATIONS to check possible predictors
+#CORRELATIONS to check possible predictors--------
 cor(meta[c("duration_c","prism", "number","deg", "d")], method="p", use="complete.obs")
 # Moderate corrrelations between d and prism/number of movement.
 
-#####################
 #formula for scattergrams
 my.formula <- y ~ x
 
-#LANDMARK: SCATTERGRAM RAW_STANDARD ES
+#LANDMARK: SCATTERGRAM RAW_STANDARD ES-----------
 ggplot(meta, aes(x=deg, y=d)) +
   geom_point(size = 4, alpha=.6) +
   ggtitle("(a)") +
@@ -41,17 +41,15 @@ ggplot(meta, aes(x=deg, y=d)) +
   theme(aspect.ratio=1, panel.grid.major =element_blank(), panel.grid.minor =element_blank(),
         axis.title = element_text(size=16),
         plot.title = element_text(size=16), legend.position = c(0.23, .9),
-        legend.key.size =  unit(0.1, "in"), legend.background = element_blank()) -> PA_META_Fig4a
-PA_META_Fig4a
+        legend.key.size =  unit(0.1, "in"), legend.background = element_blank()) -> PA_META_Fig1
+PA_META_Fig1
 
-##############
-#META_ANALYSIS
+#META_ANALYSIS--------------
 
 #simple random effects models
 ma <- rma.uni(yi=d, sei=SE, data=meta, method= "REML")
 
-###############################
-#UNMODERATED FUNNEL PLOT, LANDMARK
+#UNMODERATED FUNNEL PLOT, LANDMARK--------------
 
 #GET META_ESTIMATE
 estimate<- as.numeric(summary(ma)[[1]])
@@ -70,7 +68,7 @@ ul95 <- estimate + (1.96*se.seq)
 #data frame of CIs
 dfCI = data.frame(ll95, ul95, se.seq)
 
-#LANDMARK FUNNEL PLOT
+#LANDMARK FUNNEL PLOT----------
 ggplot(meta[!is.na(meta$d), ], aes(x = d, y = SE)) +
   geom_line(data = dfCI, aes(x = ll95, y = se.seq), colour = 'grey') +
   geom_line(data = dfCI, aes(x = ul95, y = se.seq), colour = 'grey') +
@@ -90,16 +88,15 @@ ggplot(meta[!is.na(meta$d), ], aes(x = d, y = SE)) +
         panel.grid.minor.x =element_blank(), axis.title = element_text(size=16),
         plot.title = element_text(size=16), legend.position = c(0.88, .78),
         legend.key.size =  unit(0.1, "in"), legend.background = element_blank(),
-        legend.box.background = element_rect(colour = "black")) -> PA_META_Fig4b
+        legend.box.background = element_rect(colour = "black")) -> PA_META_Fig2
 
-PA_META_Fig4b
+PA_META_Fig2
 
-##########################
-#random effects models, with moderators
+
+#random effects models, with moderators-------
 ma <- rma.uni(yi=d, sei=SE, data=meta, mods=~prism+number, method= "REML"); summary(ma)
 
-################
-#MODERATED FUNNEL PLOT LANDMARK
+#MODERATED FUNNEL PLOT LANDMARK------------
 #meta-analytic estimate and CIs
 fun <- funnel(ma)
 fun <- cbind(fun, meta[!is.na(meta$d), c("prism", "number")])
@@ -143,39 +140,20 @@ ggplot(fun, aes(x = x, y = y)) +
         panel.grid.minor.x =element_blank(), axis.title = element_text(size=16),
         plot.title = element_text(size=16), legend.position = c(0.88, .78),
         legend.key.size =  unit(0.1, "in"), legend.background = element_blank(),
-        legend.box.background = element_rect(colour = "black")) -> PA_META_Fig4c
+        legend.box.background = element_rect(colour = "black")) -> PA_META_Fig3
 
-PA_META_Fig4c
+PA_META_Fig3
 
-###############
-#UNPACK MODEL PREDICTIONS
+#UNPACK MODEL PREDICTIONS-----------------
 #make df for results
 predict_MA<-as.data.frame(predict.rma(ma, level = 95, addx = TRUE))
 
-
 #plot meta-analytic models
-ggplot(predict_MA, aes(x=X.prism, y= pred)) + 
+ggplot(predict_MA, aes(x=X.number, y= pred, col = as.factor(X.prism))) + 
   geom_hline(yintercept=0, linetype="dotted") +
-  geom_point(size = 3, alpha = 0.8, col = "black")+
-  # geom_line(size=1)+
-  # geom_ribbon(aes(ymin=ci.lb,ymax=ci.ub), fill="grey", alpha="0.5") +
-  geom_smooth(colour="black", method="lm", fill = "grey") +
-  geom_smooth(aes(y=cr.lb), linetype="dotted", colour="black", method="lm",
-              fullrange = TRUE) +
-  geom_smooth(aes(y=cr.ub), linetype="dotted", colour="black", method="lm",
-              fullrange = TRUE) +
-  scale_y_continuous(limits=c(0,2), breaks = seq(from=-0, to=2, by=.5)) +
-  labs(x="Prism strength (degrees)", y = "Predicted average effect size (d)") +
-  theme_bw() +
-  theme(aspect.ratio = 1, panel.grid.minor = element_blank(),
-        axis.title = element_text(size=18), axis.text = element_text(size=12),
-        strip.text = element_text(size=16)) -> PA_META_Fig5
-PA_META_Fig5
-
-#plot meta-analytic models
-ggplot(predict_MA, aes(x=X.number, y= pred)) + 
-  geom_hline(yintercept=0, linetype="dotted") +
-  geom_point(size = 5, alpha = 0.3, col = "black")+
+  geom_point(size = 5, alpha = 0.3)+
+  scale_color_manual(name= "Prism (°)", values = c("8.5", "10", "12.4",
+                                                   "15", "17")) +
   # geom_line(size=1)+
   # geom_ribbon(aes(ymin=ci.lb,ymax=ci.ub), fill="grey", alpha="0.5") +
   geom_smooth(colour="black", method="lm", fill = "grey") +
@@ -188,19 +166,42 @@ ggplot(predict_MA, aes(x=X.number, y= pred)) +
   theme_bw() +
   theme(aspect.ratio = 1, panel.grid.minor = element_blank(),
         axis.title = element_text(size=18), axis.text = element_text(size=12),
-        strip.text = element_text(size=16)) -> PA_META_Fig6
-PA_META_Fig6
+        strip.text = element_text(size=16))-> PA_META_Fig4
+PA_META_Fig4
 
-############
-#WRITE FILES
-png("PA_META_Fig4.png", units="in", width=10.5, height=15.75, res=200)
-grid.arrange(PA_META_Fig4a, PA_META_Fig4b, PA_META_Fig4c, PA_META_Fig4d, PA_META_Fig4e, PA_META_Fig4f, ncol=2)
+
+
+#prediction for 10degrees PA and 250 movements-------
+ma$beta[1,1] + (ma$beta[2,1]*10) + (ma$beta[3,1]*250)
+# 0.74 
+ma$beta[1,1] + (ma$beta[2,1]*10) + (ma$beta[3,1]*200)
+
+ma$beta[1,1] + (ma$beta[2,1]*10) + (ma$beta[3,1]*200)
+
+(predict_MA %>% arrange(X.number))
+newmods <- cbind(number=seq(from = 200, to = 400, by=20), prism = 10)
+p<-as.data.frame(predict.rma(ma, newmods=newmods, level = 95, addx = TRUE))
+ggplot(data = p, aes(x = X.number, y = pred))+
+  geom_line(col = "red", size=2)+
+  geom_smooth(aes(y=cr.lb), linetype="dotted", colour="black", method="lm") +
+  geom_smooth(aes(y=cr.ub), linetype="dotted", colour="black", method="lm")+
+  geom_smooth(aes(y=ci.lb), linetype="longdash", colour="blue", method="lm") +
+  geom_smooth(aes(y=ci.ub), linetype="longdash", colour="blue", method="lm")+
+  scale_y_continuous(breaks=seq(0,2,0.1))+
+  scale_x_continuous(breaks=seq(200,400,50))+
+  labs(x = "Number of movements", y = "Cohen's d prediction")+
+  # geom_vline(xintercept = c(200,250,300))+
+  theme_bw(base_size = 20)-> PA_META_Fig5
+p %>% filter(X.number %in% c(200,260,300))
+  
+#forest plot------------------
+forest(ma)
+
+#WRITE FILES-----------
+png("PA_META_Fig.png", units="in", width=10.5, height=15.75, res=200)
+grid.arrange(PA_META_Fig1, PA_META_Fig2, PA_META_Fig3, PA_META_Fig4,
+             PA_META_Fig5, ncol=2)
 dev.off()
 
-png("PA_META_Fig5.png", units="in", width=10, height=10, res=200)
-PA_META_Fig5
-dev.off()
-
-############
-#tidy environment
-rm(dfCI, fun_LB, fun_LM, newmods, pLB, pLM, predict_MA, EGG, estimate, ll95, ma_LB, ma_LM, my.formula, se.seq, T, t, ul95)
+#tidy environment------------------
+rm(dfCI, fun, newmods,predict_MA, EGG, estimate, ll95, ma, my.formula, se.seq, T, t, ul95)
