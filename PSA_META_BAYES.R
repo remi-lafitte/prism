@@ -7,8 +7,10 @@ library(gridExtra)
 library(metafor)
 library(ggpmisc)
 library(tidyverse)
+library(tidybayes)
 library(magrittr)
 library(brms)
+library(BEST)
 #MANUALLY SET WORKING DIRECTORY TO DIRECTORY CONTAINING DATAFILE PA_META.csv---------
 #load the data
 meta <- read.csv(here::here("McINTOSH_19_PA_META","PSA_META.csv"), sep = ";", dec = ",")
@@ -16,6 +18,59 @@ meta <- read.csv(here::here("McINTOSH_19_PA_META","PSA_META.csv"), sep = ";", de
 #see the data structure
 str(meta)
 # View(meta)
+
+
+#PRIOR PREDICTIVE CHECKING
+sample_mu <-rnorm(1e4,0,10)
+sample_sigma <-rcauchy(1000, 0, 1)
+ppc<-data.frame(x = rnorm(1000, sample_mu, sample_sigma)) %>% 
+  na.omit()
+
+ggplot(data = ppc, aes(x) ) +
+  scale_x_continuous(limits = c(-2,4), breaks = seq(-2,4,0.5) )+
+  geom_histogram(col="white") +
+  labs(x = "D", y = "Nombre d'échantillons") +
+  theme_bw(base_size = 20)
+
+# meta$d %>% range()
+# median(meta$d)
+# mean(meta$d)
+
+BEST::plotPost(ppc$x, credMass = 0.95, cex = 1.5, 
+               xlab = expression(theta), xlim = c(-4, 4) )
+
+# meta$STUDY----
+get_prior()
+p <-c(
+  prior(normal(0, 10), coef = intercept),
+  prior(cauchy(0, 1), class = sd)
+)
+p2 <-c(
+  prior(normal(0, 10), class = Intercept),
+  prior(cauchy(0, 1), class = sd)
+)
+m <-brm(d | se(SD) ~ 0 + intercept + (1 | ID),
+        family = gaussian(),data = meta,
+        prior = p,
+         save_all_pars = TRUE,
+         iter = 2000, warmup = 1000, chains = 4,seed = 14,
+         cores = parallel::detectCores(),
+         control = list(adapt_delta = .95))
+
+m2 <-brm(d | se(SD) ~ 1 + (1 | ID),
+        family = gaussian(),data = meta,
+        prior = p2,
+        save_all_pars = TRUE,
+        iter = 2000, warmup = 1000, chains = 4,seed = 14,
+        cores = parallel::detectCores(),
+        control = list(adapt_delta = .95))
+
+mcmc_plot(m,type = "hist")
+mcmc_plot(m, type = "rhat")
+summary(m)
+summary(m2)
+pairs(m)
+
 
 cor(meta[c("prism","prism_c","duration_raw", "duration_c",
            "number","deg", "d")], method="p", use="complete.obs")
@@ -46,93 +101,4 @@ ggplot(meta, aes(x=deg, y=d)) +
         plot.title = element_text(size=16), legend.position = c(0.23, .9),
         legend.key.size =  unit(0.1, "in"), legend.background = element_blank()) 
 
-prior <- c(
-  prior(normal(0, 2), coef = intercept),
-  prior(cauchy(0, 1), class = sd)
-)
-# meta$STUDY
-m1 <- brm(data = meta, family = gaussian,
-            d | se(SD) ~ 1 + (1 | ID),
-            prior = c(prior(normal(0, 1.5), class = Intercept),
-                      prior(cauchy(0, 1), class = sd)),
-  save_all_pars = TRUE,
-  iter = 2000, warmup = 1000, chains = 4,seed = 14,
-  cores = parallel::detectCores(),
-  control = list(adapt_delta = .99)
-)
-# simple model, without moderators, such as prism strenght, or duration.
-# it will be the next step...
-print(m1)
-# good fit
-m1 %>%
-  plot(
-    pars = c("^b_", "^sd_"),
-    combo = c("dens_overlay", "trace"),
-    theme = theme_bw(base_size = 16)
-  )
-print(m1)
-# forest plot------------------
-# load tidybayes
-library(tidybayes)
-get_variables(m1)
 
-m1 %>%
-  spread_draws(b_Intercept,r_ID[ID,]) %>%
-  # add the grand mean to the group-specific deviations
-  mutate(mu = b_Intercept + r_ID) %>%
-  ungroup() %>%
-  mutate(outcome = str_replace_all(ID, "[.]", " ")) %>% 
-  # plot
-  ggplot(aes(x = mu, y = reorder(outcome))) +
-  geom_vline(xintercept = fixef(m1)[1, 1], color = "white", size = 1) +
-  geom_vline(xintercept = fixef(m1)[1, 3:4], color = "white", linetype = 2) +
-  geom_halfeyeh(.width = .95, size = 2/3) +
-  labs(x = expression(italic("Cohen's d")),
-       y = NULL) +
-  theme(panel.grid   = element_blank(),
-        axis.ticks.y = element_blank(),
-        axis.text.y  = element_text(hjust = 0))+
-  theme_bw(base_size=20)
-
-
-
-
-
-# Study-specific effects are deviations + average
-out_r <- m1 %>%
-  spread_draws(b_Intercept,r_ID[ID,]) %>%
-  # add the grand mean to the group-specific deviations
-  mutate(mu = b_Intercept + r_ID)
-
-
-# Average effect
-out_f <- spread_draws(fit_rem, b_Intercept) %>% 
-  mutate(study = "Average")
-# Combine average and study-specific effects' data frames
-out_all <- bind_rows(out_r, out_f) %>% 
-  ungroup() %>%
-  # Ensure that Average effect is on the bottom of the forest plot
-  mutate(study = fct_relevel(study, "Average"))
-# Data frame of summary numbers
-out_all_sum <- group_by(out_all, study) %>% 
-  mean_qi(b_Intercept)
-#> Warning: unnest() has a new interface. See ?unnest for details.
-#> Try `cols = c(.lower, .upper)`, with `mutate()` needed
-# Draw plot
-out_all %>%   
-  ggplot(aes(b_Intercept, study)) +
-  geom_density_ridges(
-    rel_min_height = 0.01, 
-    col = NA,
-    scale = 1
-  ) +
-  geom_pointintervalh(
-    data = out_all_sum, size = 1
-  ) +
-  geom_text(
-    data = mutate_if(out_all_sum, is.numeric, round, 2),
-    # Use glue package to combine strings
-    aes(label = glue::glue("{b_Intercept} [{.lower}, {.upper}]"), x = Inf),
-    hjust = "inward"
-  )
-#> Picking joint bandwidth of 0.0226
