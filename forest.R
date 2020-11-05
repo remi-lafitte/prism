@@ -24,12 +24,12 @@ meta <- read.csv(here::here("PSA_META","PSA_META.csv"), sep = ";", dec = ",")
 set.seed(123)
 
 #standardize degree = simplify the prior spec (not used)
-meta$degz<-(meta$deg - mean(meta$deg))/sd(meta$deg)
+# meta$degz<-(meta$deg - mean(meta$deg))/sd(meta$deg)
 #CORRELATION---------
 # identify moderators = prism degree and duration
-cor(meta[c("prism","prism_c","duration_raw", "duration_c",
-           "number","deg", "d")], method="p", use="complete.obs")
-
+cor(meta[c("prism_c", "duration_c","number"
+           ,"deg", "d")], method="p", use="complete.obs")
+str(meta)
 # defining the priors--------------
 prior1 <- c(
   prior(normal(4, 2), class = Intercept), # degree' prior
@@ -40,7 +40,7 @@ prior1 <- c(
 
 # PRIOR CHECKING-----------
 # model with prior only--------------
-bmod0 <- brm(
+bmod_prior <- brm(
   deg | se(SD) ~ 1 + (1+STUDY) + (1|ID),
   data = meta,
   prior = prior1,
@@ -55,7 +55,7 @@ bmod0 <- brm(
 
 # plot distribution of the parameters-----------
 mcmc_areas(
-  as.array(bmod0), 
+  as.array(bmod_prior), 
   pars = c("sd_ID__Intercept",
            "sd_ID__Intercept","Intercept"),
   prob = 0.8, # 80% intervals
@@ -65,6 +65,24 @@ mcmc_areas(
   title = "Prior parameter distributions",
   subtitle = "with medians and 80% intervals"
 )
+
+# Zero model-------
+prior0 <- c(
+  prior(normal(4, 2), class = Intercept) # degree' prior
+)
+bmod0 <- brm(
+  deg | se(SD) ~ 1,
+  data = meta,
+  prior = prior0,
+  sample_prior = FALSE,
+  save_all_pars = TRUE,
+  chains = 4,
+  warmup = 4000,
+  iter = 16000,
+  cores = parallel::detectCores(),
+  control = list(adapt_delta = .99)
+)
+
 # model1 - no moderator---------------
 bmod1 <- brm(
   deg | se(SD) ~ 1 + (1|STUDY) + (1|ID),
@@ -78,18 +96,7 @@ bmod1 <- brm(
   cores = parallel::detectCores(),
   control = list(adapt_delta = .99)
 )
-bmod2 <- brm(
-  deg | se(SD) ~ 1 + (1|STUDY),
-  data = meta,
-  prior = prior1,
-  sample_prior = FALSE,
-  save_all_pars = TRUE,
-  chains = 4,
-  warmup = 3000,
-  iter = 12000,
-  cores = parallel::detectCores(),
-  control = list(adapt_delta = .99)
-)
+
 # mcmc_areas(
 #   as.array(bmod1), 
 #   pars = c("sd_ID__Intercept",
@@ -106,6 +113,19 @@ tidy(bmod1)
 VarCorr(bmod1, robust = F)
 # tidy(bmod1,effects = "ran_vals")
 
+#leave-one-out-----------
+article_names <- sort(unique(meta$STUDY) )
+bmods <- setNames(vector("list", length(article_names) ), article_names)
+for (i in seq_along(article_names) ) {
+  print(article_names[i])
+  subdata <- droplevels(subset(meta, STUDY != article_names[i]) )
+  capture.output({bmods[[i]] <- update(bmod1, newdata = subdata)})
+}
+
+intercepts_LOO <- as.numeric(unlist(lapply(bmods, function(x) brms::fixef(x)[1]) ) )
+range(intercepts_LOO)
+# the estimate is robust
+
 # forest plot------------------
 f<-
   forest(bmod1, grouping = "STUDY",
@@ -115,7 +135,7 @@ f2<-f+
   theme_bw()+
   scale_x_continuous(limits = c(-4,20), breaks = seq(-4,20,2))+
   geom_vline(xintercept = 0, lty = "dashed")+
-  labs(y = "Article", x = "Overall effect size (�)")
+  labs(y = "Article", x = "Overall effect size (?)")
 f2
 png("PSA_META_forest.png", units="in", width=10, height=10, res=200)
 f2
@@ -128,7 +148,232 @@ s<-posterior_samples(bmod1, pars = c("b_Intercept","sd_STUDY__Intercept"))
 BEST::plotPost(s$sd_STUDY__Intercept, credMass = 0.95)
 predictive_interval(bmod1, prob = 0.95)
 
-# shrinkage----------
+# prism degree effect------------
+# we want to assess the effect of  prism degres
+prior2 <- c(
+  prior(normal(4, 2), class = Intercept), # degree' prior
+  prior(cauchy(0, 2), class = sd),
+  prior(normal(0, 10), class = b)) 
+# slope of ... between small and big optic deviation = non informative prior
+bmod2 <- brm(
+  deg | se(SD) ~ 1 + prism_c + (1|ID) + (1|STUDY),
+  data = meta,
+  prior = prior2,
+  sample_prior = FALSE,
+  save_all_pars = TRUE,
+  chains = 4,
+  warmup = 4000,
+  iter = 16000,
+  cores = parallel::detectCores(),
+  control = list(adapt_delta = .99)
+)
+# check mcmc chain
+plot(bmod2, combo = c("dens_overlay", "trace"), 
+     theme = theme_bw(base_size = 16))
+# retrieving the posterior samples
+post_prism <- posterior_samples(bmod2, pars = "^b_")
+
+# BF (long)
+# (bf_prism <- 
+#   bayes_factor(bmod2, bmod1,
+#                repetitions = 1e2, cores = parallel::detectCores()))
+
+prism_small<- post_prism[,1] - (post_prism[,2]*0.5)
+prism_big<- post_prism[,1] + (post_prism[,2]*0.5)
+
+BEST::plotPost(prism_small)
+sd(prism_small)
+BEST::plotPost(prism_big)
+sd(prism_big)
+hdi <- (5.88-0.102)/2
+hdi
+(bmod_prism_est <- 
+    tidy(bmod2,parameters = c("^b_", "^sd_"), prob = 0.95))
+
+
+# There is no reliable evidence for difference between the two conditions
+# (beta = 2.32, 95% CrI [-1.58, 6.1], BF01 = 0.83).
+post_prism %>%
+  sample_n(size = 1e2) %>%
+  rownames_to_column("draw") %>%
+  expand(nesting(draw, b_Intercept, b_prism_c), a = c(-0.5,0.5)) %>%
+  mutate(d = b_Intercept + b_prism_c * a) %>%
+  ggplot(aes(x = a, y = d) ) +
+  geom_point(data = meta, aes(x = prism_c, y = deg), size = 2) +
+  geom_line(aes(group = draw), color = "purple", size = 0.5, alpha = 0.5) +
+  labs(x = "Prism strenght", y = "Degree") +
+  theme_bw(base_size = 20)
+
+# difference between small and big
+# c1 <- (post_prism[, 1] + post_prism[, 2]) - (post_prism[, 1] + post_prism[, 3])
+
+# prism * number of movements------------
+meta$number_c<- (meta$number - mean(meta$number))/sd(meta$number)
+# we remove the study of GUINET13, a potential outlier.
+# meta2<-meta
+# meta2 %<>% filter(STUDY != "Guinet (2013)")
+
+prior3 <- c(
+  prior(normal(4, 2), class = Intercept), # degree' prior
+  prior(cauchy(0, 2), class = sd),
+  prior(normal(0, 10), class = b)) 
+# slope of ... between small and big optic deviation = non informative prior
+
+bmod3 <- brm(
+  deg | se(SD) ~ 1 + prism_c*duration_c + (1|ID) + (1|STUDY),
+  data = meta,
+  prior = prior3,
+  sample_prior = FALSE,
+  save_all_pars = TRUE,
+  chains = 4,
+  warmup = 4000,
+  iter = 16000,
+  cores = parallel::detectCores(),
+  control = list(adapt_delta = .99)
+)
+# check mcmc chain
+plot(bmod3, combo = c("dens_overlay", "trace"), 
+     theme = theme_bw(base_size = 12))
+tidy(bmod3)
+
+bmod4 <- brm(
+  deg | se(SD) ~ 1 + duration_c + (1|ID) + (1|STUDY),
+  data = meta,
+  prior = prior3,
+  sample_prior = FALSE,
+  save_all_pars = TRUE,
+  chains = 4,
+  warmup = 4000,
+  iter = 16000,
+  cores = parallel::detectCores(),
+  control = list(adapt_delta = .99)
+)
+# check mcmc chain
+plot(bmod4, combo = c("dens_overlay", "trace"), 
+     theme = theme_bw(base_size = 12))
+tidy(bmod4)
+# model comparison------------
+# calcul du WAIC et ajout du WAIC à chaque modèle
+bmod0 <-add_criterion(bmod0, "waic")
+bmod1 <-add_criterion(bmod1, "waic")
+bmod2 <-add_criterion(bmod2, "waic")
+bmod3 <-add_criterion(bmod3, "waic")
+bmod4<-add_criterion(bmod4, "waic")
+
+# comparaison des WAIC de chaque modèle
+w <-loo_compare(bmod0,bmod1,bmod2,bmod3,bmod4, criterion = "waic")
+print(w, simplify = FALSE)
+model_weights(bmod0,bmod1,bmod2,bmod3,bmod4, weights = "waic") %>% 
+  round(digits = 3)
+# this model comparison shows that the best model contains the estimates of
+# prism strenght.
+# we keep model 2 = 
+post_prism <- posterior_samples(bmod2, pars = "^b_")
+prism_small<- post_prism[,1] - (post_prism[,2]*0.5)
+prism_big<- post_prism[,1] + (post_prism[,2]*0.5)
+
+BEST::plotPost(prism_small)
+sd(prism_small)
+BEST::plotPost(prism_big)
+sd(prism_big)
+hdi <- (5.88-0.102)/2
+hdi
+
+#prediction------------
+
+conditions <- make_conditions(bmod3b, "prism_d")
+plot(conditional_effects(
+  bmod3b, effects = "number",conditions=conditions,
+  spaghetti = F, nsamples = 1e2),points = TRUE)
+
+coef<-fixef(bmod3b)
+# intercept = small prism + 0 pointing !
+post_prism_nb2 <- posterior_samples(bmod3b, pars = "^b_")
+m_mpg = brm(
+  mpg ~ hp * cyl,
+  data = mtcars,
+  
+  file = "models/tidy-brms_m_mpg.rds"  # cache model (can be removed)
+)
+
+
+# meta2 %>%
+#   ggplot(aes(x = number, y = deg)) +
+#   geom_abline(intercept = fixef(bmod3b)[1], 
+#               slope     = fixef(bmod3b)[3]) +
+#   geom_point(shape = 1, size = 2, color = "royalblue") +
+#   theme_bw() +
+#   theme(panel.grid = element_blank())
+# mcmc_plot(bmod3b)
+# 
+# # we need new `nd` data
+# nd <- expand.grid(number =  seq(0,350,20),
+#                   prism_d = c(0,1),
+#                   SD = 0)
+
+
+# Data frame to evaluate average effects predictions on
+# fit<-fitted(bmod3b, newdata = nd,re_formula = NA)
+# pred<-predict(bmod3b, newdata = nd,re_formula = NA)
+# 
+# # re_formula is needed
+# fitavg<-cbind(nd, fit) %>% 
+#   filter(prism_d == 0) %>% select(-prism_d , -SD)
+# 
+# predavg<-cbind(nd, pred) %>% 
+#   filter(prism_d == 0) %>% select(-prism_d , -SD,-Est.Error)
+# 
+# p1 <- ggplot(meta2, aes(x = number, y = deg)) +
+#   geom_point(shape = 1) +
+#   # geom_smooth(method = "lm", fill = "dodgerblue", level = .95) +
+#   coord_cartesian(ylim = c(-15, 15))
+# 
+# colnames(fitavg)<-c("number", "deg", "SD","lower", "upper")
+# colnames(predavg)<-c("number", "deg","lower", "upper")
+# p1
+# p1 +
+#   geom_line(data = fitavg,group = "number", col = "black", size = 1) +
+#   geom_line(data = fitavg, aes(y = lower), col = "black", lty = 2) +
+#   geom_line(data = fitavg, aes(y = upper), col = "black", lty = 2) +
+#   geom_ribbon(data = predavg, aes(ymin = lower, ymax = upper), 
+#               col = "NA", alpha = .2,outline.type="full")+
+#   theme_bw(base_size = 20)
+
+
+coef[1,1] + (coef[3,1]*300)
+# 4.2 degrees
+post_prism_nb2 %>% 
+  sample_n(size = 1e2) %>%
+  rownames_to_column("draw") %>%
+  expand(nesting(draw, b_Intercept, b_number), a = seq(50,400,10)) %>% 
+  mutate(deg = b_Intercept + (b_number*a)) %>% 
+  ggplot(aes(x = a, y = deg))+
+  geom_line(aes(group = draw), color = "grey", 
+            size = 0.5, alpha = 0.5)+
+  geom_smooth(method = "lm", se =F)+
+  theme_bw()
+
+f <-
+  fitted(b8.3, 
+         newdata = nd,
+         probs = c(.015, .985)) %>%
+  data.frame() %>%
+  bind_cols(nd) %>%
+  mutate(cont_africa = ifelse(cid == 1, "African nations", "Non-African nations"))
+
+post_prism_nb %>%
+  sample_n(size = 1e2) %>%
+  rownames_to_column("draw") %>%
+  expand(nesting(draw, b_Intercept, b_number_c, b_prism_c)) %>%
+  mutate(d1 = b_Intercept + (b_prism_c * -0.5) +  b_number_c) %>%
+  mutate(d2 = b_Intercept + (b_prism_c * +0.5) +  b_number_c) %>%
+  ggplot(aes(x = b_number_c, y = d1) ) +
+  geom_point(data = meta, aes(x = number_c, y = deg), size = 2) +
+  geom_line(aes(group = draw), color = "purple", size = 0.5, alpha = 0.5) +
+  labs(x = "Number of movements (prism < 12.5°)", y = "PSA A-E (°)") +
+  theme_bw(base_size = 20)
+
+## shrinkage----------
 meta %>%
   group_by(STUDY) %>%
   summarise(Observed = mean(deg) ) %>%
@@ -144,7 +389,8 @@ meta %>%
   ylab("D") +
   theme(legend.title = element_blank()) +
   coord_flip()
-# other plot scripts------------------
+
+#other plot scripts------------------
 study.draws <- spread_draws(bmod1, r_STUDY[ID,], b_Intercept) %>% 
   mutate(b_Intercept = r_ID + b_Intercept)
 pooled.effect.draws <- spread_draws(bmod1, b_Intercept) %>% 
@@ -169,138 +415,3 @@ ggplot(aes(b_Intercept, relevel(ID, "Pooled Effect", after = Inf)),
   labs(x = "Standardized Mean Difference",
        y = element_blank()) +
   theme_minimal()
-
-#more complex models------------
-# we want to assess the effect of 
-bmod1 <- brm(
-  deg | se(SD) ~ 1 + prism_c + duration_c + (1|ID) + (1|STUDY),
-  data = meta,
-  prior = prior1,
-  sample_prior = FALSE,
-  save_all_pars = TRUE,
-  chains = 4,
-  warmup = 4000,
-  iter = 16000,
-  cores = parallel::detectCores(),
-  control = list(adapt_delta = .99)
-)
-#forest fx--------
-# model <- bmod1_forest
-# 
-# grouping = "article"; pars = NA; level = 0.95; av_name = "Average"; 
-# sort = FALSE; show_data = TRUE; col_ridge = NA; fill_ridge = "grey75"; 
-# density = TRUE; text = TRUE; rel_min_height = 0.01; scale = 0.9;
-# digits = 2; theme_forest = FALSE;
-
-forest_ll <- function(
-  model, grouping = NA, pars = NA, level = 0.95, av_name = "Average", 
-  sort = TRUE, show_data = FALSE, col_ridge = NA, fill_ridge = "grey75", 
-  density = TRUE, text = TRUE, rel_min_height = 0.01, scale = 0.9,
-  digits = 2, theme_forest = TRUE
-) {
-  
-  if (!requireNamespace("ggridges", quietly = TRUE) ) {
-    
-    stop("ggridges package needed for this function. Please install it.", call. = FALSE)
-    
-  }
-  
-  grouping <- brmstools:::get_grouping(model, grouping)
-  probs <- c(0.5 - level / 2, 0.5 + level / 2)
-  
-  lwr <- paste0(probs[1] * 100, "%ile")
-  upr <- paste0(probs[2] * 100, "%ile")
-  
-  samples <- tidycoef(model, pars = pars, grouping = grouping)
-  
-  samples_sum <- tidycoef(
-    model, pars = pars, grouping = grouping, 
-    summary = TRUE, level = level
-  )
-  
-  samples[[grouping]] <- ifelse(is.na(samples[[grouping]]), av_name, samples[[grouping]])
-  
-  samples_sum[[grouping]] <- ifelse(is.na(samples_sum[[grouping]]), 
-                                    av_name, samples_sum[[grouping]])
-  
-  samples_sum[["Interval"]] <- paste0(round(samples_sum[["Estimate"]], 
-                                            digits), " [", round(samples_sum[[lwr]], digits), ", ", 
-                                      round(samples_sum[[upr]], digits), "]")
-  
-  if (sort) {
-    
-    samples_sum <- dplyr::arrange_(samples_sum, "type", "Parameter", "Estimate")
-    
-  } else {
-    
-    samples_sum <- dplyr::arrange(samples_sum, type, desc(article) )
-    
-  }
-  
-  samples_sum[["order"]] <- forcats::fct_inorder(paste0(samples_sum[["type"]], 
-                                                        samples_sum[[grouping]], samples_sum[["Parameter"]]) )
-  
-  samples <- dplyr::left_join(samples, samples_sum[, c(grouping, 
-                                                       "Parameter", "order")], by = c(grouping, "Parameter") )
-  
-  g <- ggplot(samples_sum, aes_string("Estimate", "order") ) + 
-    scale_y_discrete(labels = samples_sum[[grouping]], breaks = samples_sum[["order"]]) +
-    geom_vline(
-      xintercept = samples_sum %>% filter(type == "b") %>% pull(Estimate),
-      linetype = 3
-    ) +
-    geom_point()
-  
-  if (density) {
-    
-    g <- g +
-      ggridges::geom_density_ridges(
-        data = samples, aes_string(x = "value"),
-        rel_min_height = rel_min_height, 
-        scale = scale, col = col_ridge, fill = fill_ridge
-      ) +
-      geom_point()
-    
-  }
-  
-  g <- g +
-    geom_segment(
-      aes_(y = ~order, yend = ~order, x = as.name(lwr), xend = as.name(upr) )
-    )
-  
-  if (text) {
-    
-    g <- g +
-      geom_text(
-        data = samples_sum[samples_sum[["type"]] == "b", ],
-        aes_string(label = "Interval", x = "Inf"),
-        hjust = "inward", fontface = "bold", size = 3
-      ) + 
-      geom_text(
-        data = samples_sum[samples_sum[["type"]] == "r", ],
-        aes_string(label = "Interval", x = "Inf"), 
-        hjust = "inward", size = 3
-      )
-    
-  }
-  
-  if (show_data & length(unique(samples_sum[["Parameter"]]) ) == 1) {
-    
-    tmp <- dplyr::left_join(model$data, samples_sum[, c(grouping, "order")])
-    
-    g <- g +
-      geom_point(
-        data = tmp, aes_string(
-          attr(attr(model$data, "terms"), "term.labels")[1], "order"),
-        shape = 8
-      )
-    
-  }
-  
-  # g <- g + facet_wrap("Parameter", scales = "free", strip.position = "bottom")
-  
-  if (theme_forest) g <- g + theme_forest()
-  
-  g
-  
-}
