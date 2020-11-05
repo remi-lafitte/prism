@@ -181,6 +181,14 @@ post_prism <- posterior_samples(bmod2, pars = "^b_")
 prism_small<- post_prism[,1] - (post_prism[,2]*0.5)
 prism_big<- post_prism[,1] + (post_prism[,2]*0.5)
 
+png("PSA_META_small_prism.png", units="in", width=10, height=10, res=200)
+BEST::plotPost(prism_small)
+dev.off()
+
+png("PSA_META_big_prism.png", units="in", width=10, height=10, res=200)
+BEST::plotPost(prism_big)
+dev.off()
+
 BEST::plotPost(prism_small)
 sd(prism_small)
 BEST::plotPost(prism_big)
@@ -278,6 +286,34 @@ BEST::plotPost(prism_big)
 sd(prism_big)
 hdi <- (5.88-0.102)/2
 hdi
+
+# small forest---------
+meta_small<-meta %>% filter(prism == "small")
+b_small <- brm(
+  deg | se(SD) ~ 1 + (1|STUDY) + (1|ID),
+  data = meta_small,
+  prior = prior1,
+  sample_prior = FALSE,
+  save_all_pars = TRUE,
+  chains = 4,
+  warmup = 4000,
+  iter = 16000,
+  cores = parallel::detectCores(),
+  control = list(adapt_delta = .99)
+)
+tidy(b_small)
+f_small<-
+  forest(b_small, grouping = "STUDY",
+         fill_ridge = "dodgerblue", show_data = T, sort =F)+
+  xlab("Effect size (Degree)") +
+  theme_bw()+
+  scale_x_continuous(limits = c(-4,20), breaks = seq(-4,20,2))+
+  geom_vline(xintercept = 0, lty = "dashed")+
+  labs(y = "Article", x = "Overall effect size (°)")
+f_small
+png("PSA_META_small_forest.png", units="in", width=10, height=10, res=200)
+f_small
+dev.off()
 
 #prediction------------
 
