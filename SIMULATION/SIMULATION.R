@@ -150,3 +150,56 @@ p2<-ggplot(data = bw_avg, aes(x = group, y = psa,col = session))+
 png("PSA_SIMU_BW.png", units="in", width=10, height=10, res=200)
 p2
 dev.off()
+
+#COV----------
+mu <- c(0,0,0,3) 
+stddev <- c(rep(4,4))
+corMat <- matrix(c(1, 0.3, 0.3,0.3,
+                   0.3, 1, 0.3,0.3,
+                   0.3, 0.3, 1,0.3,
+                   0.3, 0.3, 0.3,1),
+                 ncol = 4)
+corMat
+covMat <- stddev %*% t(stddev) * corMat
+covMat
+ls_cov <- 
+  lapply(N, function (x)
+  as.data.frame(cbind(MASS::mvrnorm(n = 10, mu = mu, 
+                              Sigma = covMat, empirical = FALSE),x)))
+d_cov<-bind_rows(ls_cov)
+  
+  
+# further form
+colnames(d_cov)<-c("s1", "s2", "l1", "l2", "id")
+# within subject variable = short format
+wis <-d_cov
+# within subject variable = long format
+wil <-d_cov %>% 
+  gather(key = 'var', value = 'psa', -id) %>% 
+  separate(var, sep = -1, into = c("group", "session")) 
+wil_avg<-wil %>% 
+  group_by(id, group, session) %>% 
+  dplyr::summarise(psa=mean(psa))
+
+library(afex)
+m3<-afex::aov_4(psa ~ group*session + (1 + session*group | id), wil_avg)
+m3
+p3<-ggplot(data = wil_avg, aes(x = group, y = psa,col = session))+
+  geom_hline(yintercept=0, lty ="dashed")+
+  geom_boxplot(size=0.2,position = position_dodge(0.7),
+               width=0.4)+
+  # stat_summary(fun= "mean", geom = "point",
+  #              position = position_dodge(0.7), size = 6)
+  stat_summary(fun.y = mean,
+               geom = "pointrange",
+               fun.ymax = function(x) mean(x) + sd(x) / sqrt(length(x)),
+               fun.ymin = function(x) mean(x) - sd(x) / sqrt(length(x)),
+               position = position_dodge(0.7), size = 0.3)+
+  scale_x_discrete(name = "Group", labels =c("LPA", "Control"))+
+  scale_color_discrete(name = "Session", labels =c("Pre-test", "Post-test"))+
+  labs(y="PSA (degree)")+
+  theme_bw(base_size = 20)
+
+png("PSA_SIMU_WI.png", units="in", width=10, height=10, res=200)
+p3
+dev.off()
