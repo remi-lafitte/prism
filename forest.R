@@ -315,6 +315,114 @@ png("PSA_META_small_forest.png", units="in", width=10, height=10, res=200)
 f_small
 dev.off()
 
+# COHEN D------------
+prior_d <- c(
+  prior(normal(0, 5), class = Intercept), # degree' prior
+  prior(cauchy(0, 2), class = sd),
+  prior(normal(0, 10), class = b)) 
+# slope of ... between small and big optic deviation = non informative prior
+bmod_d <- brm(
+  d | se(SD) ~ 1 + prism_c + (1|ID) + (1|STUDY),
+  data = meta,
+  prior = prior_d,
+  sample_prior = FALSE,
+  save_all_pars = TRUE,
+  chains = 4,
+  warmup = 4000,
+  iter = 16000,
+  cores = parallel::detectCores(),
+  control = list(adapt_delta = .99)
+)
+# check mcmc chain
+plot(bmod_d, combo = c("dens_overlay", "trace"), 
+     theme = theme_bw(base_size = 16))
+# retrieving the posterior samples
+post_prism <- posterior_samples(bmod_d, pars = "^b_")
+tidy(bmod_d)
+prism_small<- post_prism[,1] - (post_prism[,2]*0.5)
+prism_big<- post_prism[,1] + (post_prism[,2]*0.5)
+
+png("PSA_META_small_prism_d.png", units="in", width=10, height=10, res=200)
+BEST::plotPost(prism_small)
+dev.off()
+sd(prism_small)
+png("PSA_META_big_prism_d.png", units="in", width=10, height=10, res=200)
+BEST::plotPost(prism_big)
+dev.off()
+
+#mod1----------
+prior1 <- c(
+  prior(normal(4, 2), class = Intercept), # degree' prior
+  prior(cauchy(0, 2), class = sd))
+bmod1 <- brm(
+  deg | se(SE) ~ 1 + (1|STUDY) + (1|ID),
+  data = meta,
+  prior = prior1,
+  sample_prior = FALSE,
+  save_all_pars = TRUE,
+  chains = 4,
+  warmup = 4000,
+  iter = 16000,
+  cores = parallel::detectCores(),
+  control = list(adapt_delta = .99)
+)
+tidy(bmod1)
+f3<-
+  forest(bmod1, grouping = "STUDY",
+         fill_ridge = "dodgerblue", show_data = T, sort =F)+
+  xlab("Effect size (Degree)") +
+  theme_bw()+
+  scale_x_continuous(limits = c(-4,20), breaks = seq(-4,20,2))+
+  geom_vline(xintercept = 0, lty = "dashed")+
+  labs(y = "Article", x = "Overall effect size (d)")
+f3
+png("PSA_META_SE.png", units="in", width=10, height=10, res=200)
+f3
+dev.off()
+
+#mod2-----------------
+prior2 <- c(
+  prior(normal(4, 2), class = Intercept), # degree' prior
+  prior(cauchy(0, 2), class = sd),
+  prior(normal(0, 10), class = b)) 
+# slope of ... between small and big optic deviation = non informative prior
+bmod2 <- brm(
+  deg | se(SE) ~ 1 + prism_c + (1|ID) + (1|STUDY),
+  data = meta,
+  prior = prior2,
+  sample_prior = FALSE,
+  save_all_pars = TRUE,
+  chains = 4,
+  warmup = 4000,
+  iter = 16000,
+  cores = parallel::detectCores(),
+  control = list(adapt_delta = .99)
+)
+
+post_prism <- posterior_samples(bmod2, pars = "^b_")
+prism_small<- post_prism[,1] - (post_prism[,2]*0.5)
+prism_big<- post_prism[,1] + (post_prism[,2]*0.5)
+BEST::plotPost(prism_small)
+BEST::plotPost(prism_big)
+sd(prism_small)
+
+#mod3----------------
+bmod3 <- brm(
+  d | se(SE) ~ 1 + prism_c + (1|ID) + (1|STUDY),
+  data = meta,
+  prior = prior2,
+  sample_prior = FALSE,
+  save_all_pars = TRUE,
+  chains = 4,
+  warmup = 4000,
+  iter = 16000,
+  cores = parallel::detectCores(),
+  control = list(adapt_delta = .99)
+)
+tidy(bmod3)
+post_prism <- posterior_samples(bmod3, pars = "^b_")
+prism_small<- post_prism[,1] - (post_prism[,2]*0.5)
+BEST::plotPost(prism_small)
 #prediction------------
 
 conditions <- make_conditions(bmod3b, "prism_d")
