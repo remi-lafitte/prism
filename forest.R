@@ -13,67 +13,29 @@ library(BEST)
 library(broom.mixed)
 library(ggridges)
 library(brmstools)
-library("hrbrthemes") # for the forest plot
-
-#MANUALLY SET WORKING DIRECTORY TO DIRECTORY CONTAINING DATAFILE PA_META.csv---------
-
+# setting the seed for reproducibility
+set.seed(123)
 #load the data
 meta <- read.csv(here::here("PSA_META","PSA_META.csv"), sep = ";", dec = ",")
 
-# setting the seed for reproducibility
-set.seed(123)
-
-#standardize degree = simplify the prior spec (not used)
-# meta$degz<-(meta$deg - mean(meta$deg))/sd(meta$deg)
 #CORRELATION---------
-# identify moderators = prism degree and duration
+# identify moderators
 cor(meta[c("prism_c", "duration_c","number"
            ,"deg", "d")], method="p", use="complete.obs")
-str(meta)
-# defining the priors--------------
-prior1 <- c(
-  prior(normal(4, 2), class = Intercept), # degree' prior
+# there is no obvious moderators.
+# We will use prism_c variable.
+
+#DEGREE META---------------
+# defining the priors
+prior_degree <- c(
+  prior(normal(4, 4), class = Intercept), # degree' prior
   prior(cauchy(0, 2), class = sd)
-  # cauchy distribution
-  # hist(rcauchy(1e4, scale = 2, location = 3),xlim = c(- 200, 200), breaks = 10000) 
 )
-
-# PRIOR CHECKING-----------
-# model with prior only--------------
-bmod_prior <- brm(
-  deg | se(SD) ~ 1 + (1+STUDY) + (1|ID),
+# modelisation
+mod_degree <- brm(
+  deg | se(SD) ~ 1 + prism_c + (1|STUDY) + (1|ID),
   data = meta,
-  prior = prior1,
-  sample_prior = "only",
-  save_all_pars = TRUE,
-  chains = 4,
-  warmup = 5000,
-  iter = 20000,
-  cores = parallel::detectCores(),
-  control = list(adapt_delta = .99)
-)
-
-# plot distribution of the parameters-----------
-mcmc_areas(
-  as.array(bmod_prior), 
-  pars = c("sd_ID__Intercept",
-           "sd_ID__Intercept","Intercept"),
-  prob = 0.8, # 80% intervals
-  prob_outer = 0.95, # 95%
-  point_est = "mean"
-) + ggplot2::labs(
-  title = "Prior parameter distributions",
-  subtitle = "with medians and 80% intervals"
-)
-
-# Zero model-------
-prior0 <- c(
-  prior(normal(4, 2), class = Intercept) # degree' prior
-)
-bmod0 <- brm(
-  deg | se(SD) ~ 1,
-  data = meta,
-  prior = prior0,
+  prior = prior_degree,
   sample_prior = FALSE,
   save_all_pars = TRUE,
   chains = 4,
@@ -82,108 +44,69 @@ bmod0 <- brm(
   cores = parallel::detectCores(),
   control = list(adapt_delta = .99)
 )
+# result
+tidy(mod_degree)
+summary(mod_degree)
+# global estimate = 4.4 +/- 1, 95 CI [2.4, 6.4]
 
-# model1 - no moderator---------------
-bmod1 <- brm(
-  deg | se(SD) ~ 1 + (1|STUDY) + (1|ID),
-  data = meta,
-  prior = prior1,
-  sample_prior = FALSE,
-  save_all_pars = TRUE,
-  chains = 4,
-  warmup = 4000,
-  iter = 16000,
-  cores = parallel::detectCores(),
-  control = list(adapt_delta = .99)
-)
+# plotting prism_c
+#extract posterior distribution by sampling the model
+post_degree <- posterior_samples(mod_degree, pars = "^b_")
 
-# mcmc_areas(
-#   as.array(bmod1), 
-#   pars = c("sd_ID__Intercept",
-#            "sd_ID__Intercept","Intercept"),
-#   prob = 0.8, # 80% intervals
-#   prob_outer = 0.95, # 95%
-#   point_est = "mean"
-# ) + ggplot2::labs(
-#   title = "Prior parameter distributions",
-#   subtitle = "with medians and 80% intervals"
-# )
-# prior_summary(bmod1)
-tidy(bmod1)
-VarCorr(bmod1, robust = F)
-# tidy(bmod1,effects = "ran_vals")
+# plot
+BEST::plotPost(pots_deg$b_prism_c, credMass = 0.95)
+# it represent the contrast between large and small prism, that is,
+# between the group <12.5° and >12.5°
 
-#leave-one-out-----------
-article_names <- sort(unique(meta$STUDY) )
-bmods <- setNames(vector("list", length(article_names) ), article_names)
-for (i in seq_along(article_names) ) {
-  print(article_names[i])
-  subdata <- droplevels(subset(meta, STUDY != article_names[i]) )
-  capture.output({bmods[[i]] <- update(bmod1, newdata = subdata)})
-}
-
-intercepts_LOO <- as.numeric(unlist(lapply(bmods, function(x) brms::fixef(x)[1]) ) )
-range(intercepts_LOO)
-# the estimate is robust
-
-# forest plot------------------
-f<-
-  forest(bmod1, grouping = "STUDY",
-         fill_ridge = "dodgerblue", show_data = T, sort =F)+
-  xlab("Effect size (Degree)") 
-f2<-f+
-  theme_bw()+
-  scale_x_continuous(limits = c(-4,20), breaks = seq(-4,20,2))+
-  geom_vline(xintercept = 0, lty = "dashed")+
-  labs(y = "Article", x = "Overall effect size (?)")
-f2
-png("PSA_META_forest.png", units="in", width=10, height=10, res=200)
-f2
-dev.off()
-summary(bmod1)
-
-#PREDICTION-----------
-# get_variables(bmod1)
-s<-posterior_samples(bmod1, pars = c("b_Intercept","sd_STUDY__Intercept"))
-BEST::plotPost(s$sd_STUDY__Intercept, credMass = 0.95)
-predictive_interval(bmod1, prob = 0.95)
-
-# prism degree effect------------
-# we want to assess the effect of  prism degres
-prior2 <- c(
-  prior(normal(4, 2), class = Intercept), # degree' prior
-  prior(cauchy(0, 2), class = sd),
-  prior(normal(0, 10), class = b)) 
-# slope of ... between small and big optic deviation = non informative prior
-bmod2 <- brm(
-  deg | se(SD) ~ 1 + prism_c + (1|ID) + (1|STUDY),
-  data = meta,
-  prior = prior2,
-  sample_prior = FALSE,
-  save_all_pars = TRUE,
-  chains = 4,
-  warmup = 4000,
-  iter = 16000,
-  cores = parallel::detectCores(),
-  control = list(adapt_delta = .99)
-)
-# check mcmc chain
-plot(bmod2, combo = c("dens_overlay", "trace"), 
-     theme = theme_bw(base_size = 16))
-# retrieving the posterior samples
-post_prism <- posterior_samples(bmod2, pars = "^b_")
-
-# BF (long)
-# (bf_prism <- 
-#   bayes_factor(bmod2, bmod1,
-#                repetitions = 1e2, cores = parallel::detectCores()))
-
-prism_small<- post_prism[,1] - (post_prism[,2]*0.5)
-prism_big<- post_prism[,1] + (post_prism[,2]*0.5)
-
+# effect size of the small prism group
+prism_small<- post_degree[,1] - (post_degree[,2]*0.5)
+BEST::plotPost(prism_small)
+# 3 +/-3 degree
 png("PSA_META_small_prism.png", units="in", width=10, height=10, res=200)
 BEST::plotPost(prism_small)
 dev.off()
+# D COHEN META-------------------
+# defining the priors
+prior_d <- c(
+  prior(normal(0, 3), class = Intercept), # d prior
+  prior(cauchy(0, 2), class = sd)
+)
+# modelisation
+mod_d <- brm(
+  d | se(SD) ~ 1 + prism_c + (1|STUDY) + (1|ID),
+  data = meta,
+  prior = prior_d,
+  sample_prior = FALSE,
+  save_all_pars = TRUE,
+  chains = 4,
+  warmup = 4000,
+  iter = 16000,
+  cores = parallel::detectCores(),
+  control = list(adapt_delta = .99)
+)
+# result
+tidy(mod_d)
+summary(mod_d)
+# global estimate = 4.4 +/- 1, 95 CI [2.4, 6.4]
+
+# plotting prism_c
+#extract posterior distribution by sampling the model
+post_d <- posterior_samples(mod_d, pars = "^b_")
+
+# plot
+BEST::plotPost(post_d$b_prism_c, credMass = 0.95)
+# it represent the contrast between large and small prism, that is,
+# between the group <12.5° and >12.5°
+
+# effect size of the small prism group
+prism_small<- post_d[,1] - (post_d[,2]*0.5)
+BEST::plotPost(prism_small)
+# 3 +/-3 degree
+png("PSA_META_small_prism_d.png", units="in", width=10, height=10, res=200)
+BEST::plotPost(prism_small)
+dev.off()
+
+# APPENDIX-------------
 
 png("PSA_META_big_prism.png", units="in", width=10, height=10, res=200)
 BEST::plotPost(prism_big)
@@ -559,3 +482,117 @@ ggplot(aes(b_Intercept, relevel(ID, "Pooled Effect", after = Inf)),
   labs(x = "Standardized Mean Difference",
        y = element_blank()) +
   theme_minimal()
+
+
+
+# PRIOR CHECKING-----------
+# model with prior only--------------
+bmod_prior <- brm(
+  deg | se(SD) ~ 1 + (1+STUDY) + (1|ID),
+  data = meta,
+  prior = prior1,
+  sample_prior = "only",
+  save_all_pars = TRUE,
+  chains = 4,
+  warmup = 5000,
+  iter = 20000,
+  cores = parallel::detectCores(),
+  control = list(adapt_delta = .99)
+)
+
+# plot distribution of the parameters-----------
+mcmc_areas(
+  as.array(bmod_prior), 
+  pars = c("sd_ID__Intercept",
+           "sd_ID__Intercept","Intercept"),
+  prob = 0.8, # 80% intervals
+  prob_outer = 0.95, # 95%
+  point_est = "mean"
+) + ggplot2::labs(
+  title = "Prior parameter distributions",
+  subtitle = "with medians and 80% intervals"
+)
+
+# Zero model-------
+prior0 <- c(
+  prior(normal(4, 2), class = Intercept) # degree' prior
+)
+bmod0 <- brm(
+  deg | se(SD) ~ 1,
+  data = meta,
+  prior = prior0,
+  sample_prior = FALSE,
+  save_all_pars = TRUE,
+  chains = 4,
+  warmup = 4000,
+  iter = 16000,
+  cores = parallel::detectCores(),
+  control = list(adapt_delta = .99)
+)
+
+# mcmc_areas(
+#   as.array(bmod1), 
+#   pars = c("sd_ID__Intercept",
+#            "sd_ID__Intercept","Intercept"),
+#   prob = 0.8, # 80% intervals
+#   prob_outer = 0.95, # 95%
+#   point_est = "mean"
+# ) + ggplot2::labs(
+#   title = "Prior parameter distributions",
+#   subtitle = "with medians and 80% intervals"
+# )
+# prior_summary(bmod1)
+#leave-one-out-----------
+article_names <- sort(unique(meta$STUDY) )
+bmods <- setNames(vector("list", length(article_names) ), article_names)
+for (i in seq_along(article_names) ) {
+  print(article_names[i])
+  subdata <- droplevels(subset(meta, STUDY != article_names[i]) )
+  capture.output({bmods[[i]] <- update(bmod1, newdata = subdata)})
+}
+
+intercepts_LOO <- as.numeric(unlist(lapply(bmods, function(x) brms::fixef(x)[1]) ) )
+range(intercepts_LOO)
+# the estimate is robust
+# forest plot------------------
+f<-
+  forest(mod_degree, grouping = "STUDY",
+         fill_ridge = "dodgerblue", show_data = T, sort =F)+
+  theme_bw()+
+  scale_x_continuous(limits = c(-4,20), breaks = seq(-4,20,2))+
+  geom_vline(xintercept = 0, lty = "dashed")+
+  labs(y = "Article", x = "Overall effect size (degree)")
+f
+png("PSA_META_forest.png", units="in", width=10, height=10, res=200)
+f2
+dev.off()
+summary(bmod1)
+
+
+prior2 <- c(
+  prior(normal(4, 2), class = Intercept), # degree' prior
+  prior(cauchy(0, 2), class = sd),
+  prior(normal(0, 10), class = b)) 
+# slope of ... between small and big optic deviation = non informative prior
+bmod2 <- brm(
+  deg | se(SD) ~ 1 + prism_c + (1|ID) + (1|STUDY),
+  data = meta,
+  prior = prior2,
+  sample_prior = FALSE,
+  save_all_pars = TRUE,
+  chains = 4,
+  warmup = 4000,
+  iter = 16000,
+  cores = parallel::detectCores(),
+  control = list(adapt_delta = .99)
+)
+# check mcmc chain
+plot(bmod2, combo = c("dens_overlay", "trace"), 
+     theme = theme_bw(base_size = 16))
+# retrieving the posterior samples
+post_prism <- posterior_samples(bmod2, pars = "^b_")
+
+# BF (long)
+# (bf_prism <- 
+#   bayes_factor(bmod2, bmod1,
+#                repetitions = 1e2, cores = parallel::detectCores()))
