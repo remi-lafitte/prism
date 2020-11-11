@@ -1,6 +1,7 @@
 library(ggplot2)
 library(tidyverse)
-
+# power_inter-------------
+# https://www.r-bloggers.com/2020/05/power-analysis-by-data-simulation-in-r-part-ii/
 power_inter<-function(N = 20, mu1, sigma1, mu2, sigma2,es=0.1){
 set.seed(1)
 n_sims <- 100 # we want 1000 simulations
@@ -32,15 +33,25 @@ cohens_ds_at_n <- cohens_ds_at_n[-1] # delete first NA from the vector
 power_at_n<-as.data.frame(power_at_n)
 power_at_n$id<-seq(N:(n-1))
 power_at_n$effect_size<-es
+power_at_n$sd<-es
 return(power_at_n)
 }
-y<-c(-0.1,-0.2, -0.3, -0.4, -0.5,-0.7)
-ls<-lapply(y, function(x) power_inter(N= 10, mu1 = 0, mu2 = x, 
-              sigma1 = 0.8, sigma2 =0.8, es = x))
+s<-c(0.8,1, 1.2, 1.4) # different values of sd
+power_inter_multiple<-function(sd){
+y<-c(-0.1,-0.2, -0.3, -0.4, -0.5,-0.7)  # different values of after-effects
+ls<-lapply(y, function(x) power_inter(N= 15, mu1 = 0, mu2 = x, 
+              sigma1 = sd, sigma2 =sd, es = x))
 df<-bind_rows(ls)
-ggplot(data= df, aes(x=id, y = power_at_n, 
+return(df)
+}
+
+ls2<-lapply(s, function(x) power_inter_multiple(sd = x))
+ls3 <- mapply(cbind, ls2, "sd"=s, SIMPLIFY=F)
+df<-bind_rows(ls3)
+
+p_inter<-ggplot(data= df, aes(x=id, y = power_at_n, 
                      col = as.factor(effect_size)))+
-  geom_point(size=1)+
+  # geom_point(size=1)+
   geom_hline(yintercept = .80)+
   scale_y_continuous(breaks=seq(0,1,.1))+
   scale_x_continuous(limits = c(0,100), breaks=seq(0,100,10))+
@@ -48,7 +59,9 @@ ggplot(data= df, aes(x=id, y = power_at_n,
   geom_smooth()+
   labs(x = "Number of participants",
        y = expression("Power ("*alpha~"=.10)"))+
-  geom_vline(xintercept = c(10, 30, 40, 80), lty = "dashed")+
-  theme_bw(base_size = 20)
-
-
+  # geom_vline(xintercept = c(10, 30, 40, 80), lty = "dashed")+
+  theme_bw(base_size = 20)+
+  facet_wrap(~ sd)
+png("VV_SIMU_INTER.png", units="in", width=14, height=10, res=200)
+p_inter
+dev.off()

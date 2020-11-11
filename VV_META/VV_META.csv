@@ -1,4 +1,23 @@
-STUDY;XPT;n;age;trial;deg;SD;SE;d
-Barra (2009);young1;9;;12;0,3;0,2;0,066666667;1,5
-Barra (2008);old;12;;10;0,4;0,3;0,08660254;1,333333333
-Barra (2010);old;27;;10;0,5;0,15;0,028867513;3,333333333
+ARTICLE;ID;XPT;modality;n;age;trial;deg;SD;SE;d
+Anastasopoulos (1999a);Anastasopoulos (1999a);1;V;22;adult;6;0;0,8;0,17;0
+Anastasopoulos (1999b);Anastasopoulos (1999b);1;V;20;old;6;1,4;1,9;0,42;0,74
+Guerraz (1998);Guerraz (1998);1;V;22;young;4;-0,19;1,5;0,32;-0,13
+Kerkhoff (1998);Kerkhoff (1998);1;V;12;old;10;-0,4;0,8;0,23;-0,5
+Kerkhoff (1999);Kerkhoff (1999);1;V;22;old;10;-0,4;0,8;0,25;-0,5
+Barra (2008);Barra (2008);1;V;12;old;10;0,4;0,8;0,23;0,5
+Pérennou (2008);Pérennou (2008);1;V;33;old;10;-0,04;1,1;0,19;-0,04
+Barra (2010);Barra (2010);1;V;12;old;10;0,5;0,53;0,15;0,94
+Barra (2012);Barra (2012);1;V;9;young;12;0,3;0,8;0,27;0,38
+Funk (2011);Funk (2011);1(no frame);V;12;adult;10;-0,11;0,87;0,25;-0,13
+Utz (2011);Utz (2011);1;V;16;old;6;0,25;1,8;0,45;0,14
+Saj (2012);Saj (2012);1 (center);V+H;14;old;2;-0,49;0,68;0,18;-0,72
+Baccini (2014);Baccini (2014a);1a(young);V;39;young;10;0,25;0,83;0,13;0,3
+Baccini (2014);Baccini (2014b);1b(adult);V;38;adult;10;0,1;1,22;0,2;0,08
+Braem (2014);Braem (2014c);1 (VV);V;21;young;2;-0,1;4,58;0,9;-0,02
+Braem (2014);Braem (2014);1(VH);V+H;21;young;2;0;4,12;0,9;0
+Volkening (2014);Volkening (2014);1;V;10;old;6;0,8;1,58;0,5;0,51
+Piscicelli (2016);Piscicelli (2016);1;V;20;old;10;0,06;1,21;0,27;0,05
+Baier (2017);Baier (2017);1;V;38;old;6;1,2;0,9;0,15;1,33
+Santos (2018);Santos (2018a);1a(baseline sham);V;8;young;24;0,19;0,96;0,34;0,2
+Santos (2018);Santos (2018b);1b(baseline cathode);V;8;young;24;0,39;0,79;0,28;0,49
+Santos (2018);Santos (2018c);1c(baseline anode);V;8;young;24;0;0,09;0,03;0
