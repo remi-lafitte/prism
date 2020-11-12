@@ -38,28 +38,36 @@ return(power_at_n)
 }
 s<-c(0.8,1, 1.2, 1.4) # different values of sd
 power_inter_multiple<-function(sd){
-y<-c(-0.1,-0.2, -0.3, -0.4, -0.5,-0.7)  # different values of after-effects
-ls<-lapply(y, function(x) power_inter(N= 15, mu1 = 0, mu2 = x, 
+y<-c(-0.4,-0.6,-0.8)  # different values of after-effects
+ls<-lapply(y, function(x) power_inter(N= 20, mu1 = 0, mu2 = x, 
               sigma1 = sd, sigma2 =sd, es = x))
 df<-bind_rows(ls)
 return(df)
 }
 
 ls2<-lapply(s, function(x) power_inter_multiple(sd = x))
-ls3 <- mapply(cbind, ls2, "sd"=s, SIMPLIFY=F)
+ls3 <- mapply(cbind, ls2, "sd2"=s, SIMPLIFY=F)
 df<-bind_rows(ls3)
+df_inter<-df[,-c(4)]
+df_inter$sd<-df_inter$sd2
+View(df_inter)
+# df_inter<-read.table("VV_SIMU_inter.txt")
+df_inter$sd<-paste("SD = ",df_inter$sd,sep="")
 
-p_inter<-ggplot(data= df, aes(x=id, y = power_at_n, 
+write.table(df_inter, file = "VV_SIMU_inter.txt", append = FALSE, sep = " ", dec = ".",
+            row.names = TRUE, col.names = TRUE)
+
+p_inter<-ggplot(data= df_inter, aes(x=id, y = power_at_n, 
                      col = as.factor(effect_size)))+
   # geom_point(size=1)+
   geom_hline(yintercept = .80)+
   scale_y_continuous(breaks=seq(0,1,.1))+
   scale_x_continuous(limits = c(0,100), breaks=seq(0,100,10))+
-  scale_color_discrete(name = "VV after-effect")+
+  scale_color_discrete(name = "LPA - SHAM (°)")+
   geom_smooth()+
   labs(x = "Number of participants",
        y = expression("Power ("*alpha~"=.10)"))+
-  # geom_vline(xintercept = c(10, 30, 40, 80), lty = "dashed")+
+  geom_vline(xintercept = c(30, 50, 80), lty = "dashed")+
   theme_bw(base_size = 20)+
   facet_wrap(~ sd)
 png("VV_SIMU_INTER.png", units="in", width=14, height=10, res=200)
