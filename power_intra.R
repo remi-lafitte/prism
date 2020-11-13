@@ -1,7 +1,7 @@
 library(ggplot2)
 library(tidyverse)
 library(MASS)
-
+library(tibble)
 #power_intra---------------
 # mu1=0
 # mu2=0.5
@@ -10,7 +10,7 @@ library(MASS)
 # cor<-c(0.5,0.2)
 # es=mu2
 power_intra<-function(N = 20, mu1, sigma1, mu2, sigma2,es=0.1,
-                      cor = c(0, 0.2, 0.4, 0.6)){
+                      cor = c(0.2, 0.4, 0.6)){
 mu_pre_post <- c(pre = mu1, post = mu2)
 correlations <- cor
 set.seed(1)
@@ -33,10 +33,10 @@ for(icor in 1:length(correlations)){ # do a power-simulation for each specified 
   while(power_at_n[i-1] < .95){
     for(sim in 1:n_sims){
       bivnorm <- data.frame(mvrnorm(n, mu_pre_post, sigma)) # simulate the bivariate normal
-      p_vals[sim] <- t.test(bivnorm$pre, bivnorm$post, paired = TRUE, var.equal = TRUE, conf.level = 0.9)$p.value # run t-test and extract the p-value
+      p_vals[sim] <- t.test(bivnorm$pre, bivnorm$post, paired = TRUE,alternative="greater", var.equal = TRUE, conf.level = 0.95)$p.value # run t-test and extract the p-value
       cohens_ds[sim] <- abs((mean(bivnorm$pre)-mean(bivnorm$post))/(sqrt(sd(bivnorm$pre)^2+sd(bivnorm$post)^2-2*cor(bivnorm$pre, bivnorm$post)*sd(bivnorm$pre)*sd(bivnorm$post)))) # we also save the cohens ds that we observed in each simulation
     }
-    power_at_n[i] <- mean(p_vals < .10) # check power (i.e. proportion of p-values that are smaller than alpha-level of .10)
+    power_at_n[i] <- mean(p_vals < .05) # check power (i.e. proportion of p-values that are smaller than alpha-level of .10)
     names(power_at_n)[i] <- n
     cohens_ds_at_n[i] <- mean(cohens_ds) # calculate means of cohens ds for each sample-size
     names(cohens_ds_at_n)[i] <- n
@@ -50,6 +50,7 @@ for(icor in 1:length(correlations)){ # do a power-simulation for each specified 
   names(powers_at_cor)[[icor]] <- correlations[icor] # name the power-curve in the list according to the tested correlation
   names(cohens_ds_at_cor)[[icor]] <- correlations[icor] # same for cohens d
   list1 <- mapply(cbind, powers_at_cor, "es"=es, SIMPLIFY=F)
+  # list1 <- mapply(cbind, powers_at_cor, "d"=cohens_ds_at_cor, SIMPLIFY=F)
   list2 <- mapply(cbind, list1, 
                   "cor"= as.numeric(names(powers_at_cor)), 
                   SIMPLIFY=F)
@@ -59,13 +60,13 @@ return(list(power=list3))
 }
 
 power_intra_multiple<-function(sd){
-  y<-c(-0.2, -0.4, -0.6, -0.8)  # different values of after-effects
+  y<-c(-0.4, -0.6, -0.8)  # different values of after-effects
   ls<-lapply(y, function(x) power_intra(N= 20, mu1 = 0, mu2 = x, 
                                         sigma1 = sd, sigma2 =sd, es = x))
   df<-bind_rows(ls)
   return(df)
 }
-s<-c(0.8,1,1.2, 1.4) # different values of sd
+s<-c(1) # different values of sd
 ls<-lapply(s, function(x) power_intra_multiple(sd=x))
 
 fun <-function(y, x){
@@ -75,30 +76,31 @@ fun <-function(y, x){
   y$cor<-paste("corr = ",y$cor,sep="")
   return(y)
 }
-ls
+
 ls1<-lapply(seq(1:9),function(x) fun(x=x,y=1))
-ls2<-lapply(seq(1:length(ls[[2]]$power)),function(x) fun(x=x,y=2))
-ls3<-lapply(seq(1:length(ls[[3]]$power)),function(x) fun(x=x,y=3))
-ls4<-lapply(seq(1:length(ls[[4]]$power)),function(x) fun(x=x,y=4))
+# ls2<-lapply(seq(1:length(ls[[2]]$power)),function(x) fun(x=x,y=2))
+# ls3<-lapply(seq(1:length(ls[[3]]$power)),function(x) fun(x=x,y=3))
+# ls4<-lapply(seq(1:length(ls[[4]]$power)),function(x) fun(x=x,y=4))
 
-ls11<-bind_rows(ls1) %>% mutate(sd= "SD = 0.8")
-ls22<-bind_rows(ls2)%>% mutate(sd= "SD = 1")
-ls33<-bind_rows(ls3)%>% mutate(sd= "SD = 1.2")
-ls44<-bind_rows(ls4)%>% mutate(sd= "SD = 1.4")
+ls11<-bind_rows(ls1) %>% mutate(sd= "SD = 1")
+# ls22<-bind_rows(ls2)%>% mutate(sd= "SD = 1")
+# ls33<-bind_rows(ls3)%>% mutate(sd= "SD = 1.2")
+# ls44<-bind_rows(ls4)%>% mutate(sd= "SD = 1.4")
 
-df_intra<-bind_rows(ls11, ls22,ls33,ls44)
+df_intra<-bind_rows(ls11)
 # View(df_intra)
 
-write.table(df_intra, file = "VV_SIMU_intra", append = FALSE, sep = " ", dec = ".",
-            row.names = TRUE, col.names = TRUE)
+# write.table(df_intra, file = "VV_SIMU_intra2", append = FALSE, sep = " ", dec = ".",
+#             row.names = TRUE, col.names = TRUE)
 
-p<-ggplot(data= df_intra[df_intra$sd== "SD = 1",], aes(x=id, y = power_at_n, 
+p<-
+  ggplot(data= df_intra, aes(x=id, y = power_at_n, 
                             col = as.factor(effect_size)))+
   # geom_point(size=1)+
   geom_hline(yintercept = .80)+
   scale_y_continuous(breaks=seq(0,1,.1))+
   scale_x_continuous(limits = c(0,100), breaks=seq(0,100,10))+
-  scale_color_discrete(name = "LPA - SHAM (°)")+
+  scale_color_discrete(name = "LPA - SHAM (Â°)")+
   geom_smooth()+
   labs(x = "Number of participants",
        y = expression("Power ("*alpha~"=.10)"))+
@@ -112,31 +114,34 @@ p
 dev.off()
 
 # fusion-------------
-df_inter<-read.table("VV_SIMU_inter.txt")
-df_inter$cor<-paste("Between-S")
-df_inter$design <-"between"
-df_intra$design <-"within"
-
+# df_all<-read.table("VV_SIMU_all.txt")
+# write.table(df_all, file = "VV_SIMU_all.txt", append = FALSE, sep = " ", dec = ".",
+#             row.names = TRUE, col.names = TRUE)
 colnames(df_inter)
 colnames(df_intra)
-df_all<-bind_rows(df_inter, df_intra)
+df_inter$cor<-paste("Between-S")
+df2<-df_inter %>% dplyr::select(-d)
+colnames(df2)
+
+str(df2)
+str(df_intra)
+df2$sd<-"SD = 1"
+df_all<-bind_rows(df2, df_intra)
 
 
-write.table(df_all, file = "VV_SIMU_all.txt", append = FALSE, sep = " ", dec = ".",
-            row.names = TRUE, col.names = TRUE)
 df_plot<-df_all[(df_all$sd== "SD = 1")&(df_all$cor != "corr = 0"),]
 p<-ggplot(data= df_plot, aes(x=id, y = power_at_n,col = as.factor(effect_size)))+
   # geom_point(size=1)+
   geom_hline(yintercept = .80)+
-  scale_y_continuous(breaks=seq(0,1,.1))+
-  scale_x_continuous(limits = c(0,100), breaks=seq(0,100,10))+
-  scale_color_discrete(name = "LPA vs. SHAM (°)")+
+  scale_y_continuous(limits = c(0,1), breaks=seq(0,1,.1))+
+  scale_x_continuous(limits = c(0,80), breaks=seq(0,80,10))+
+  scale_color_discrete(name = "LPA vs. SHAM (Â°)")+
   geom_smooth()+
   labs(x = "Number of participants",
-       y = expression("Power ("*alpha~"=.10)"))+
+       y = expression("Power ("*alpha~"=.05)"))+
   geom_vline(xintercept = c(30, 50, 70), lty = "dashed")+
   theme_bw(base_size = 20)+
-  facet_wrap(~ cor)
+  facet_wrap(~ as.factor(cor))
 
 
 png("VV_SIMU_ALL.png", units="in", width=14, height=10, res=200)
