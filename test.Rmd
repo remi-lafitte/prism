@@ -1,0 +1,22 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+x<-read.csv2(here::here("0-DESIGN", "CONTRAST.csv"), header=T)
+library(pander)
+print(pandoc.table(x, style="grid"))
+x
+```
+
+
+```{r}
+head(x)
+```
+
+```{r}
+library(kableExtra)
+kable(x)
+```
+

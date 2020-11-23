@@ -1,0 +1,16 @@
+Levels;prism_pretest_control;prism_posttest_control;prism_pretest_leftward;prism_posttest_lefward;VR_pretest_control;VR_posttest_control;VR_pretest_leftward;VR_posttest_lefward
+Contrast;;;;;;;;
+Time;-0,5;0,5;-0,5;0,5;-0,5;0,5;-0,5;0,5
+Perturbation;-0,5;-0,5;0,5;0,5;-0,5;-0,5;0,5;0,5
+Time X Perturbation;0,5;-0,5;-0,5;0,5;0,5;-0,5;-0,5;0,5
+Training;-0,5;-0,5;-0,5;-0,5;0,5;0,5;0,5;0,5
+Time X Perturbation X Training;-0,5;0,5;0,5;-0,5;0,5;-0,5;-0,5;0,5
+;;; ;;;;;
+Variable;Level 1;Level 2;;;;;;
+Time;pretest;posttest;;;;;;
+Perturbation;control;leftward;;;;;;
+Training;prism;VR;;;;;;
+;;;;;;;;
+;;;;;;;;
+;;;;;;;;
+;;;; ;;;;
