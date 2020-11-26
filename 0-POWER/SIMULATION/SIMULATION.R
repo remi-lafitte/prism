@@ -108,7 +108,8 @@ ggplot(aes(x = side, y = vv,fill = time, col = time))+
                position = position_dodge(0.7), size = 1, shape=21, col = "black",
                stroke= 1.5)
 
-df_simu %>% 
+p<-
+  df_simu %>% 
   rename("Visual Vertical" = "vv", "Straight Ahead"=ssa) %>% 
   mutate(train = fct_recode(train, 
              "Prism" = "prism", 
@@ -133,18 +134,6 @@ df_simu %>%
                position = position_dodge(0.7), size = 1, shape=21, col = "black",
                stroke= 1.5)
   
-
-df_simu %>% 
-  filter(train == "vr") %>% 
-  group_by(id, side, time) %>% 
-  summarise(vv = mean(vv)) %>% 
-  ggplot(aes(x = side, y = vv,fill = time, col = time))+
-  geom_point(width = 0.3, size=2, position = position_dodge(0.5))+
-  geom_hline(yintercept = 0)+
-  theme_bw(base_size=20)+
-  stat_summary(fun.y = mean,
-               geom = "pointrange",
-               fun.ymax = function(x) mean(x) + sd(x) / sqrt(length(x)),
-               fun.ymin = function(x) mean(x) - sd(x) / sqrt(length(x)),
-               position = position_dodge(0.7), size = 1, shape=21, col = "black",
-               stroke= 1.5)
+png("Expected_Data.png", units="in", width=14, height=10, res=200)
+p
+dev.off()
