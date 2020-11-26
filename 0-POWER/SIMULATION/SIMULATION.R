@@ -1,205 +1,150 @@
-#SIMULATION OF DATA----------------------
-library(tibble)
-library(ggplot2)
+# Simulation of data -------------------
+library(truncnorm) 
 library(tidyverse)
-library(MASS) 
-library(tidyr)
-library(magrittr)
-library(purrr)
 library(dplyr)
-library(rethinking)
-library(ggpubr)
-select<- dplyr::select
 
-# 1) Covariance between pre and post test--------------
-old<-read.table(here::here("SIMULATION", "psa_2019.txt"),
-                header = T, sep= ",", dec = ",")
-d<-old %>%
-  filter(group == "control") %>% 
-  dplyr::select(time, subject, bias)  
-pr<-d %>% filter(., time == "pre") %>% rename(pre = "bias") %>% select(-time)
-po<-d %>% filter(., time == "post")%>% rename(post = "bias")%>% 
-  select(-time, -subject)
+simu<-function(x){
+# VV----------
+# VV in pretest--------
+vv_pre_prism_left <- rnorm(n=10, mean = 0, sd =1)
+vv_pre_prism_control <- rnorm(n=10, mean = 0, sd =1)
+vv_pre_vr_left <- rnorm(n=10, mean = 0, sd =1)
+vv_pre_vr_control <- rnorm(n=10, mean = 0, sd =1)
+# VV in posttest--------
+vv_post_prism_left <- rnorm(n=10, mean = -0.5, sd =1)
+vv_post_prism_control <- rnorm(n=10, mean = 0, sd =1)
 
-df<-cbind(pr, po) %>% na.omit()
-v<-seq(1:max(df$subject))
-ls<-lapply(v, function(x) as.data.frame(cor(df[df$subject == x,]$pre, 
-                                            df[df$subject == x,]$post)))
-df2<-bind_rows(ls)
-colnames(df2)<-"cor"
-df2<-df2 %>% na.omit
+vr_left<-rtruncnorm(n=1, a=3, b=17, mean=10, sd=7) # rnorm with lower and upper limits
+vv_post_vr_left <- rnorm(n=10, mean = vr_left, sd =2)
+vv_post_vr_control <- rnorm(n=10, mean = 0, sd =1)
 
-mean(df2$cor)
-sd(df2$cor)
+vv_all<-cbind(vv_pre_prism_control, vv_pre_prism_left, vv_pre_vr_control, vv_pre_vr_left,
+              vv_post_prism_control, vv_post_prism_left, vv_post_vr_control, vv_post_vr_left)
 
-plot(df2$cor)
+# SSA----------
+# SSA in pretest--------
 
-# no evidence of covariance between pre test and post test.
-df_t<-df %>% mutate(w = post-pre) %>%
-  group_by(subject) %>% 
-  summarise(m = mean(w))  
-t.test(m ~ 1,df_t, mu = 0, y = NULL)
+ssa_pre<-rtruncnorm(n=1, a=-5, b=5, mean=0, sd=3) # rnorm with lower and upper limits
 
-# no link between pre and post test.
-# simplify data creation = no covariance
-# covariance can range between 0 and 0.2 (cor)
+ssa_pre_prism_left <- rnorm(n=10, mean = ssa_pre, sd =3)
+ssa_pre_prism_control <- rnorm(n=10, mean = ssa_pre, sd =3)
+ssa_pre_vr_left <- rnorm(n=10, mean = ssa_pre, sd =1)
+ssa_pre_vr_control <- rnorm(n=10, mean = ssa_pre, sd =1)
+# ssa in posttest--------
+ssa_post<-rtruncnorm(n=1, a=-2, b=6, mean= 3, sd= 3) # rnorm with lower and upper limits
 
-# data frame simulation-----------------
-## parameters-------
-set.seed(5) # used to replicate example
-pre <- 0 # average psa AE
-post <- 3 # average psa AE
-sigma <- 4 # std 
-N <- seq(1:30)
+ssa_post_prism_left <- rnorm(n=10, mean = ssa_post, sd =1)
+ssa_post_prism_control <- rnorm(n=10, mean = ssa_pre, sd =1)
+
+ssa_post_vr<-rtruncnorm(n=1, a=-2, b=6, mean= 1, sd= 3) # rnorm with lower and upper limits
+ssa_post_vr_left <- rnorm(n=10, mean = ssa_post_vr, sd =2)
+ssa_post_vr_control <- rnorm(n=10, mean = ssa_pre, sd =1)
+
+ssa_all<-cbind(ssa_pre_prism_control, ssa_pre_prism_left, ssa_pre_vr_control, ssa_pre_vr_left,
+              ssa_post_prism_control, ssa_post_prism_left, ssa_post_vr_control, ssa_post_vr_left)
+
+#Multi VV------------------
+corMat <- matrix(c
+            (1,0,0,0,0,0,0,0,
+              0,1,0,0,0,0,0,0,
+              0,0,1,0,0,0,0,0,
+              0,0,0,1,0,0,0,0,
+              0,0,0,0,1,0,0,0,
+              0,0,0,0,0,1,0,0,
+              0,0,0,0,0,0,1,0,
+              0,0,0,0,0,0,0,1), 
+            nrow = 8, ncol = 8)
 
 
+mu_vv <- c(apply(vv_all, 2, mean)) 
+stddev_vv <- c(apply(vv_all, 2, sd))
+covMat_vv <- stddev_vv %*% t(stddev_vv) * corMat
+df_vv<-as.data.frame(MASS::mvrnorm(n=10, mu = mu_vv, Sigma = covMat_vv))
 
-sham_pre <- lapply(N, function (x) as.data.frame(rnorm(10 , pre , sigma)))
-sham_post <- lapply(N, function (x) as.data.frame(rnorm(10 , pre , sigma)))
-lpa_pre <- lapply(N, function (x) as.data.frame(rnorm(10 , pre, sigma)))
-lpa_post <- lapply(N, function (x) as.data.frame(cbind(rnorm(10 ,post, sigma),x)))
+mu_ssa <- c(apply(ssa_all, 2, mean)) 
+stddev_ssa <- c(apply(ssa_all, 2, sd))
+covMat_ssa <- stddev_ssa %*% t(stddev_ssa) * corMat
+df_ssa<-as.data.frame(MASS::mvrnorm(n=10, mu = mu_ssa, Sigma = covMat_ssa))
 
-spr<-bind_rows(sham_pre)
-spo<-bind_rows(sham_post)
-lpr<-bind_rows(lpa_pre)
-lpo<-bind_rows(lpa_post)
-x<-cbind(spr, spo, lpr, lpo)
-colnames(x)<-c("s1", "s2", "l1", "l2", "id")
-head(x)
+df_vv_long<-
+  df_vv %>% 
+  gather(var, vv) %>%
+  separate(var, sep ="_", into = c("measure", "time", "train", "side")) %>% 
+  select(-measure) %>% 
+  as_tibble()
 
-# within subject variable = short format
-wis <-x  
-# within subject variable = long format
-wil <-x %>% 
-  gather(key = 'var', value = 'psa', -id) %>% 
-  separate(var, sep = -1, into = c("group", "session")) 
-wil_avg<-wil %>% 
-  group_by(id, group, session) %>% 
-  dplyr::summarise(psa=mean(psa))
+df_ssa_long<-
+  df_ssa %>% 
+  gather(var, ssa) %>%
+  separate(var, sep ="_", into = c("measure", "time", "train", "side")) %>% 
+  select(-measure) %>% 
+  as_tibble()
 
-#2)WITHIN SUBJECT approach------
-library(afex)
-m1<-afex::aov_4(psa ~ group*session + (1 + session*group | id), wil_avg)
-m1
-p<-ggplot(data = wil_avg, aes(x = group, y = psa,col = session))+
-  geom_hline(yintercept=0, lty ="dashed")+
-  geom_boxplot(size=0.2,position = position_dodge(0.7),
-               width=0.4)+
-  # stat_summary(fun= "mean", geom = "point",
-  #              position = position_dodge(0.7), size = 6)
+df_final<-df_vv_long %>% 
+  inner_join(.,df_ssa_long, by = c("train", "time", "side")) %>% 
+  mutate(id = x)
+
+
+return(df_final)
+}
+
+ 
+ls<-lapply(seq(101,130,1), function(x) simu(x=x))
+df_simu<-bind_rows(ls)
+df_simu %>% 
+  # filter(train == "prism") %>% 
+  group_by(id, side,train, time) %>% 
+  summarise(vv = mean(vv)) %>% 
+ggplot(aes(x = side, y = vv,fill = time, col = time))+
+  geom_point(width = 0.3, size=2,alpha=0.5,
+             position = position_dodge(0.5))+
+  geom_hline(yintercept = 0)+
+  theme_bw(base_size=20)+
+  facet_wrap(~ train, scale="free")+
   stat_summary(fun.y = mean,
                geom = "pointrange",
                fun.ymax = function(x) mean(x) + sd(x) / sqrt(length(x)),
                fun.ymin = function(x) mean(x) - sd(x) / sqrt(length(x)),
-               position = position_dodge(0.7), size = 0.3)+
-  scale_x_discrete(name = "Group", labels =c("LPA", "Control"))+
-  scale_color_discrete(name = "Session", labels =c("Pre-test", "Post-test"))+
-  labs(y="PSA (degree)")+
-  theme_bw(base_size = 20)
-  
-png("PSA_SIMU_WI.png", units="in", width=10, height=10, res=200)
-p
-dev.off()
+               position = position_dodge(0.7), size = 1, shape=21, col = "black",
+               stroke= 1.5)
 
-#3)BETWEEN SUBJECT APPROACH-------------
-N1<-seq(100,130,1)
-N2<-seq(131,160,1)
-sham_pre <- lapply(N1, function (x) as.data.frame(rnorm(10 , pre , sigma)))
-sham_post <- lapply(N1, function (x) as.data.frame(cbind(rnorm(10 , pre , sigma),x)))
-lpa_pre <- lapply(N2, function (x) as.data.frame(rnorm(10 , pre, sigma)))
-lpa_post <- lapply(N2, function (x) as.data.frame(cbind(rnorm(10 ,post, sigma),x)))
-
-spr<-bind_rows(sham_pre)
-spo<-bind_rows(sham_post)
-lpr<-bind_rows(lpa_pre)
-lpo<-bind_rows(lpa_post)
-x1<-cbind(spr, spo)
-x2<-cbind(lpr, lpo)
-colnames(x1)<-c( "post", "pre",  "id")
-colnames(x2)<-c("post","pre",  "id")
-x11<-x1 %>% gather(key = "session", value = "psa",-id) %>% mutate(group="sham")
-x22<-x2 %>% gather(key = "session", value = "psa",-id) %>% mutate(group="lpa")
-x3<-bind_rows(x11,x22)
-
-# between subject variable = long format
-bwl <-x3  
-
-bw_avg<-bwl %>% 
-  group_by(id, group, session) %>% 
-  dplyr::summarise(psa=mean(psa))
-library(afex)
-m2<-afex::aov_4(psa ~ group*session + (1 + session | id), bw_avg)
-m2
-
-p2<-ggplot(data = bw_avg, aes(x = group, y = psa,col = session))+
-  geom_hline(yintercept=0, lty ="dashed")+
-  geom_boxplot(size=0.2,position = position_dodge(0.7),
-               width=0.4)+
-  # stat_summary(fun= "mean", geom = "point",
-  #              position = position_dodge(0.7), size = 6)
+df_simu %>% 
+  rename("Visual Vertical" = "vv", "Straight Ahead"=ssa) %>% 
+  mutate(train = fct_recode(train, 
+             "Prism" = "prism", 
+             "Tilted Room" = "vr"),
+         side = fct_recode(side, 
+                           "Control" = "control", 
+                           "Leftward" = "left")) %>% 
+  gather(., key = "task", value = "degree", 
+         c(`Straight Ahead`, `Visual Vertical`)) %>% 
+  group_by(id, side,train, time, task) %>% 
+  summarise(degree = mean(degree)) %>% 
+  ggplot(aes(x = side, y = degree,fill = time, col = time))+
+  geom_point(width = 0.3, size=2,alpha=0.5,
+             position = position_dodge(0.5))+
+  geom_hline(yintercept = 0)+
+  theme_bw(base_size=20)+
+  facet_wrap(~ train*task, scale="free")+
   stat_summary(fun.y = mean,
                geom = "pointrange",
                fun.ymax = function(x) mean(x) + sd(x) / sqrt(length(x)),
                fun.ymin = function(x) mean(x) - sd(x) / sqrt(length(x)),
-               position = position_dodge(0.7), size = 0.3)+
-  scale_x_discrete(name = "Group", labels =c("LPA", "Control"))+
-  scale_color_discrete(name = "Session", labels =c("Pre-test", "Post-test"))+
-  labs(y="PSA (degree)")+
-  theme_bw(base_size = 20)
-
-png("PSA_SIMU_BW.png", units="in", width=10, height=10, res=200)
-p2
-dev.off()
-
-#COV----------
-mu <- c(0,0,0,3) 
-stddev <- c(rep(4,4))
-corMat <- matrix(c(1, 0.3, 0.3,0.3,
-                   0.3, 1, 0.3,0.3,
-                   0.3, 0.3, 1,0.3,
-                   0.3, 0.3, 0.3,1),
-                 ncol = 4)
-corMat
-covMat <- stddev %*% t(stddev) * corMat
-covMat
-ls_cov <- 
-  lapply(N, function (x)
-  as.data.frame(cbind(MASS::mvrnorm(n = 10, mu = mu, 
-                              Sigma = covMat, empirical = FALSE),x)))
-d_cov<-bind_rows(ls_cov)
+               position = position_dodge(0.7), size = 1, shape=21, col = "black",
+               stroke= 1.5)
   
-  
-# further form
-colnames(d_cov)<-c("s1", "s2", "l1", "l2", "id")
-# within subject variable = short format
-wis <-d_cov
-# within subject variable = long format
-wil <-d_cov %>% 
-  gather(key = 'var', value = 'psa', -id) %>% 
-  separate(var, sep = -1, into = c("group", "session")) 
-wil_avg<-wil %>% 
-  group_by(id, group, session) %>% 
-  dplyr::summarise(psa=mean(psa))
 
-library(afex)
-m3<-afex::aov_4(psa ~ group*session + (1 + session*group | id), wil_avg)
-m3
-p3<-ggplot(data = wil_avg, aes(x = group, y = psa,col = session))+
-  geom_hline(yintercept=0, lty ="dashed")+
-  geom_boxplot(size=0.2,position = position_dodge(0.7),
-               width=0.4)+
-  # stat_summary(fun= "mean", geom = "point",
-  #              position = position_dodge(0.7), size = 6)
+df_simu %>% 
+  filter(train == "vr") %>% 
+  group_by(id, side, time) %>% 
+  summarise(vv = mean(vv)) %>% 
+  ggplot(aes(x = side, y = vv,fill = time, col = time))+
+  geom_point(width = 0.3, size=2, position = position_dodge(0.5))+
+  geom_hline(yintercept = 0)+
+  theme_bw(base_size=20)+
   stat_summary(fun.y = mean,
                geom = "pointrange",
                fun.ymax = function(x) mean(x) + sd(x) / sqrt(length(x)),
                fun.ymin = function(x) mean(x) - sd(x) / sqrt(length(x)),
-               position = position_dodge(0.7), size = 0.3)+
-  scale_x_discrete(name = "Group", labels =c("LPA", "Control"))+
-  scale_color_discrete(name = "Session", labels =c("Pre-test", "Post-test"))+
-  labs(y="PSA (degree)")+
-  theme_bw(base_size = 20)
-
-png("PSA_SIMU_WI.png", units="in", width=10, height=10, res=200)
-p3
-dev.off()
+               position = position_dodge(0.7), size = 1, shape=21, col = "black",
+               stroke= 1.5)
