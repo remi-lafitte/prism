@@ -127,6 +127,9 @@ p<-
   geom_hline(yintercept = 0)+
   theme_bw(base_size=20)+
   facet_wrap(~ train*task, scale="free")+
+  labs(y = "Degree", x = "Deviation")+
+  scale_color_discrete(name = "Time", labels =c("Post-test", "Pre-test"))+
+  scale_fill_discrete(name = "Time", labels =c("Post-test", "Pre-test"))+
   stat_summary(fun.y = mean,
                geom = "pointrange",
                fun.ymax = function(x) mean(x) + sd(x) / sqrt(length(x)),
@@ -137,3 +140,92 @@ p<-
 png("Expected_Data.png", units="in", width=14, height=10, res=200)
 p
 dev.off()
+p
+
+#STATISTICS----------
+# T-TEST----------
+# aggregate
+df_simu_mean<-df_simu %>% 
+  group_by(id, time, side, train) %>% 
+  summarize(vv = mean(vv), ssa= mean(ssa)) %>% 
+  ungroup()
+# dcast = wide format
+library(data.table)
+setDT(df_simu_mean)
+ df_simu_wide<-
+  dcast(df_simu_mean, id ~ time+side+train,
+                    value.var = c("ssa", "vv"))
+df_t<-
+  as.data.frame(df_simu_wide) %>% 
+   select(id, contains("prism")) %>% 
+   mutate(
+     time =
+     (vv_post_control_prism + vv_post_left_prism)-
+     (vv_pre_control_prism + vv_pre_left_prism),
+     side =
+     (vv_post_left_prism + vv_pre_left_prism)-
+   (vv_post_control_prism + vv_pre_control_prism),
+      time_side = 
+     (vv_post_left_prism + vv_pre_control_prism)-
+     (vv_pre_left_prism + vv_post_control_prism))
+
+lm(time_side ~ 1, df_t) %>% summary()
+lm(time ~ 1, df_t) %>% summary()
+lm(side ~ 1, df_t) %>% summary()
+
+sort(rstudent(lm(time_side ~ 1, df_t)))
+x<-out(lm(time_side ~ 1, df_t), df_t)
+x$outlier
+# xtabs(vv ~ id+time, data = df_simu_mean)
+# aggregate(vv ~ id, df_simu_mean,I)
+
+# ANOVA----------
+library(afex)
+m1<-afex::aov_4(vv ~ time*side + (time*side|id), 
+                data =df_simu[df_simu$train=="prism",])
+                                                              
+summary(m1)
+# le scénario avec shift VV de -0.5° et SD = 1 fonctionne pour train = prism!
+
+m2<-afex::aov_4(ssa ~ time*side + (time*side|id), 
+                data =df_simu[df_simu$train=="vr",])
+summary(m2)
+# le scénario avec shift PSA de +1° et SD = 3 ne 
+# fonctionne pas pour train = VR !
+
+# LMER--------------
+# Interaction between the variables Deviation and Time
+library(lme4)
+library(lmerTest)
+str(df_simu)
+lmer(formula = vv ~ time*side + (time*side|id), data =df_simu)
+# warning = model too complex
+# BRMS---------------------
+# library(tidybayes)
+# library(brms)
+# 
+# df_simu$time_c<-ifelse(df_simu$time == "pre", -0.5, 0.5)
+# df_simu$side_c<-ifelse(df_simu$side == "control", -0.5, 0.5)
+# 
+# prior_vv <- c(
+#   prior(normal(0, 10), class = Intercept), 
+#   # uninformative prior
+#   prior(cauchy(0, 10), class = sd),
+#   prior(normal(0, 10), class = b),
+#   prior(lkj(2), class = cor)
+# )
+# # modelisation
+# m1 <- brm(
+#   vv ~ 1 + time_c*side_c + (1 + time_c*side_c|id),
+#   data = df_simu,
+#   prior = prior_vv,
+#   sample_prior = TRUE,
+#   save_all_pars = TRUE,
+#   chains = 4,
+#   warmup = 4000,
+#   iter = 16000,
+#   cores = parallel::detectCores(),
+#   control = list(adapt_delta = .99)
+# )
+# result
+# tidy(mod_degree)
