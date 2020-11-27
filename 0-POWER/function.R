@@ -422,7 +422,9 @@ out <- function(model, data, cook = 4, hat=3){
   outlier_name <- 
     bind_rows(df_cook, df_hat, df_sdr) %>% # list of outliers
     select(id) %>% unique()
-
+  
+  outlier_data<-data %>% filter(id %in% outlier_name$id)
+  
   data_no_outlier <- data %>% 
     dplyr::filter(!id %in% outlier_name)
   old_model<-model
@@ -445,5 +447,6 @@ out <- function(model, data, cook = 4, hat=3){
   plot<-p1+p2+p3+p4+p5+p6
   
   return(list(plot=plot,outlier = outlier_name, 
+              outlier_data= outlier_data, 
               new_data = data_no_outlier, coeff=coeff))
 }

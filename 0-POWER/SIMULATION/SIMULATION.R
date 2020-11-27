@@ -174,7 +174,7 @@ lm(time ~ 1, df_t) %>% summary()
 lm(side ~ 1, df_t) %>% summary()
 
 sort(rstudent(lm(time_side ~ 1, df_t)))
-x<-out(lm(time_side ~ 1, df_t), df_t)
+x<-out(lm(time_side ~ 1, df_t), df_t, cook = 10)
 x$outlier
 # xtabs(vv ~ id+time, data = df_simu_mean)
 # aggregate(vv ~ id, df_simu_mean,I)
