@@ -22,3 +22,5 @@ knitr::opts_chunk$set(echo = TRUE)
 "Votre tâche consistera à pointer avec votre index droit vers des cibles. Avant chaque pointage, il faudra que votre bras droit soit reposé sur la table, votre index positionné en face de votre poitrine. Votre main gauche devra toujours être positionnée sur votre cuisse gauche. Il faudra alors pointer le plus rapidement et précisément possible vers la cible qui s'affichera sur la table. La tâche durera à peu près 10 minutes. Nous ferons régulièrement des pauses pour vous permettre de vous reposer. La tâche se déroulera dans le noir, afin que vous puissiez être pleinement concentré sur les cibles lumineuses". 
 
 ## Réalité virtuelle
+
+"Je vais maintenant vous demander de porter ce casque de réalité virtuelle. Dans un premier temps, il sera simplement éteint pendant 2 minutes. Ensuite, je l'allumerai, et vous serez alors immergé dans un décors de chambre. Une ligne rouge apparaîtra sur le mur de la chambre. Votre tâche consistera à aligner cette ligne à la verticale à l'aide des mêmes instructions verbales que tout à l'heure"
