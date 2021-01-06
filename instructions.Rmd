@@ -1,0 +1,24 @@
+---
+title: "Consignes Expérience 1"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Verticale visuelle
+
+"La tâche se déroulera dans le noir. Vous verrez apparaître à l'écran une ligne lumineuse. Votre tâche consistera à aligner cette ligne à la verticale. Pour cela, vous devrez indiquer dans quel sens orienter la ligne, en disant "gauche" ou "droite". Au début, la ligne se déplacera vers la gauche ou la droite de façon grossière. Quand vous voudrez affiner le déplacement de la ligne, vous pourrez le signaler en disant "plus petit". Quand vous serez sûr de vous, vous pourrez le signaler en disant "OK". Il y aura d'abord deux essais d'entraînement, suivis de 10 essais pour de vrai. Avant de commencer la tâche, nous allons patienter 2 minutes dans le noir."
+
+## Droit-devant
+
+"Votre tâche consistera à pointer vers votre droit-devant, c'est-à-dire le plan imaginaire qui passe par le milieu de votre corps et qui sépare l'espace extérieur en partie gauche et droite. Avant chaque pointage, il faudra que votre bras droit soit reposé sur la table, votre main droite en face de votre poitrine. Votre main gauche doit être positionnée sur votre cuisse gauche. Une fois en position de départ, vous devrez pointer vers votre droit-devant en touchant la table avec votre index. Une fois satisfait de votre réponse, vous repositionnerez votre bras en position de départ. Je vous signalerai alors verbalement le début du prochain essai. Il y aura 10 essais en tout. Vous réaliserez cette tâche dans le noir, afin de ne pas baser votre réponse sur la vision." 
+
+**mystère = pointer en glissant le bras ?**
+
+## Adaptation prismatique
+
+"Votre tâche consistera à pointer avec votre index droit vers des cibles. Avant chaque pointage, il faudra que votre bras droit soit reposé sur la table, votre index positionné en face de votre poitrine. Votre main gauche devra toujours être positionnée sur votre cuisse gauche. Il faudra alors pointer le plus rapidement et précisément possible vers la cible qui s'affichera sur la table. La tâche durera à peu près 10 minutes. Nous ferons régulièrement des pauses pour vous permettre de vous reposer. La tâche se déroulera dans le noir, afin que vous puissiez être pleinement concentré sur les cibles lumineuses". 
+
+## Réalité virtuelle
